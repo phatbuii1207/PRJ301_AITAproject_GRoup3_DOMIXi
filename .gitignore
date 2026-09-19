@@ -1,0 +1,7 @@
+target/
+*.class
+*.war
+*.log
+.netbeans_automatic_build
+nbproject/private/
+.idea/
