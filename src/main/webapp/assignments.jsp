@@ -25,8 +25,17 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>📚 Quản Lý Đề Bài / Bài Tập (CRUD Demo)</h2>
-            <a href="home.jsp" style="color: #38bdf8; text-decoration: none;">🏠 Về Trang Chủ</a>
+            <div>
+                <h2>📚 Quản Lý Đề Bài / Bài Tập (CRUD Giảng Viên)</h2>
+                <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
+                    Giảng viên: <b style="color: #fff;">${sessionScope.currentUser.fullName}</b> 
+                    <span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 6px;">Lecturer</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <a href="home.jsp" style="color: #38bdf8; text-decoration: none; font-size: 14px;">🏠 Về Trang Chủ</a>
+                <a href="logout" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 13px;">🚪 Đăng Xuất</a>
+            </div>
         </div>
 
         <!-- FORM THÊM MỚI HOẶC CHỈNH SỬA -->

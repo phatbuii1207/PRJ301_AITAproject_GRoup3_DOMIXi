@@ -20,6 +20,18 @@ public class AssignmentServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("currentUser");
+
+        if (currentUser == null) {
+            response.sendRedirect("login");
+            return;
+        }
+        if ("Student".equalsIgnoreCase(currentUser.getRole())) {
+            response.sendRedirect("student-assignments");
+            return;
+        }
+
         String action = request.getParameter("action");
         if (action == null) action = "list";
 
@@ -45,6 +57,18 @@ public class AssignmentServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User currentUser = (User) session.getAttribute("currentUser");
+
+        if (currentUser == null) {
+            response.sendRedirect("login");
+            return;
+        }
+        if ("Student".equalsIgnoreCase(currentUser.getRole())) {
+            response.sendRedirect("student-assignments");
+            return;
+        }
+
         String action = request.getParameter("action");
         String title = request.getParameter("title");
         String description = request.getParameter("description");
@@ -56,9 +80,7 @@ public class AssignmentServlet extends HttpServlet {
             dao.updateAssignment(a);
         } else {
             // Xử lý THÊM MỚI (CREATE)
-            HttpSession session = request.getSession();
-            User currentUser = (User) session.getAttribute("currentUser");
-            int lecturerId = (currentUser != null) ? currentUser.getUserId() : 1; // Mặc định ID 1 nếu chưa đăng nhập
+            int lecturerId = currentUser.getUserId();
 
             Assignment a = new Assignment(0, lecturerId, null, title, description, null);
             dao.insertAssignment(a);

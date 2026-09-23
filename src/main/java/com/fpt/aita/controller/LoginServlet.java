@@ -39,7 +39,15 @@ public class LoginServlet extends HttpServlet {
             // Đăng nhập thành công -> Lưu vào Session
             HttpSession session = request.getSession();
             session.setAttribute("currentUser", user);
-            response.sendRedirect("home.jsp");
+
+            // Phân quyền chuyển hướng theo vai trò (Role-based Navigation)
+            if ("Lecturer".equalsIgnoreCase(user.getRole())) {
+                response.sendRedirect("assignments");
+            } else if ("Student".equalsIgnoreCase(user.getRole())) {
+                response.sendRedirect("student-assignments");
+            } else {
+                response.sendRedirect("home.jsp");
+            }
         } else {
             // Đăng nhập thất bại -> Báo lỗi ra màn hình
             request.setAttribute("error", "Sai tên đăng nhập hoặc mật khẩu!");

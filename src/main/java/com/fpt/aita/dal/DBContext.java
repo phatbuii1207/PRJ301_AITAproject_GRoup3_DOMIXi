@@ -11,8 +11,8 @@ public class DBContext {
         try {
             // Thay đổi user và password theo tài khoản SQL Server của bạn
             String user = "sa";
-            String pass = "123"; 
-String url = "jdbc:sqlserver://localhost;instanceName=PHAT_FPT;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
+            String pass = "Thinhkhung@@123"; 
+            String url = "jdbc:sqlserver://localhost:1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
 
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             connection = DriverManager.getConnection(url, user, pass);
