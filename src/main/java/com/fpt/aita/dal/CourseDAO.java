@@ -121,10 +121,64 @@ public class CourseDAO extends DBContext {
     }
 
     /**
+     * 4. CREATE: Thêm môn học mới
+     */
+    public boolean insertCourse(Course c) {
+        String sql = "INSERT INTO COURSES (course_code, course_name, description, badge, total_slots) VALUES (?, ?, ?, ?, ?)";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, c.getCourseCode());
+            ps.setString(2, c.getCourseName());
+            ps.setString(3, c.getDescription());
+            ps.setString(4, c.getBadge());
+            ps.setInt(5, c.getTotalSlots());
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("Notice (TV2): insertCourse: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 5. UPDATE: Cập nhật thông tin môn học
+     */
+    public boolean updateCourse(Course c) {
+        String sql = "UPDATE COURSES SET course_code = ?, course_name = ?, description = ?, badge = ?, total_slots = ? WHERE course_id = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, c.getCourseCode());
+            ps.setString(2, c.getCourseName());
+            ps.setString(3, c.getDescription());
+            ps.setString(4, c.getBadge());
+            ps.setInt(5, c.getTotalSlots());
+            ps.setInt(6, c.getCourseId());
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("Notice (TV2): updateCourse: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 6. DELETE: Xóa môn học theo ID
+     */
+    public boolean deleteCourse(int id) {
+        String sql = "DELETE FROM COURSES WHERE course_id = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("Notice (TV2): deleteCourse: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Dữ liệu mặc định 4 môn học chuẩn EduNext Portal
      * Đảm bảo hệ thống hoạt động ổn định khi TV5 chưa chạy migration SQL.
      */
-    private List<Course> getDefaultCourses() {
+    public List<Course> getDefaultCourses() {
         List<Course> list = new ArrayList<>();
         list.add(new Course(1, "PRJ301", "Java Web Application Development",
                 "Học phần Servlet, JSP, JDBC, MVC Model và Static Code Analysis AST.", "CORE", 30));
