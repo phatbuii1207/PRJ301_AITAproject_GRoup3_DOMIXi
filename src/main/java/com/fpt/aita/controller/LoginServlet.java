@@ -5,6 +5,7 @@ import com.fpt.aita.model.User;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,7 +23,7 @@ public class LoginServlet extends HttpServlet {
             response.sendRedirect("login");
             return;
         }
-        // Chuyển tới giao diện đăng nhập login.jsp
+        // Chuyển tới giao diện đăng nhập login.jsp (JSP sẽ đọc ${cookie.remUser.value})
         request.getRequestDispatcher("login.jsp").forward(request, response);
     }
 
@@ -31,16 +32,27 @@ public class LoginServlet extends HttpServlet {
             throws ServletException, IOException {
         String u = request.getParameter("username");
         String p = request.getParameter("password");
+        String remember = request.getParameter("remember");
 
         UserDAO dao = new UserDAO();
         User user = dao.login(u, p);
 
         if (user != null) {
-            // Đăng nhập thành công -> Lưu vào Session
+            // 1. Quản lý trạng thái Session
             HttpSession session = request.getSession();
             session.setAttribute("currentUser", user);
 
-            // Phân quyền chuyển hướng theo vai trò (Role-based Navigation)
+            // 2. Quản lý trạng thái Cookie (Remember Me)
+            Cookie cookieUser = new Cookie("remUser", u);
+            if ("yes".equals(remember) || "on".equals(remember)) {
+                cookieUser.setMaxAge(7 * 24 * 60 * 60); // Lưu 7 ngày
+            } else {
+                cookieUser.setMaxAge(0); // Xóa cookie nếu không tích chọn
+            }
+            cookieUser.setPath(request.getContextPath().isEmpty() ? "/" : request.getContextPath());
+            response.addCookie(cookieUser);
+
+            // 3. Phân quyền chuyển hướng theo vai trò (Role-based Navigation)
             if ("Lecturer".equalsIgnoreCase(user.getRole())) {
                 response.sendRedirect("assignments");
             } else if ("Student".equalsIgnoreCase(user.getRole())) {
@@ -55,3 +67,4 @@ public class LoginServlet extends HttpServlet {
         }
     }
 }
+

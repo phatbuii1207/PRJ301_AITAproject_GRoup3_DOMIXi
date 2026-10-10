@@ -88,11 +88,15 @@
             <form action="login" method="POST">
                 <div class="form-group">
                     <label>Tên đăng nhập:</label>
-                    <input type="text" name="username" placeholder="vd: gv_namhn hoặc he180001" required />
+                    <input type="text" name="username" value="${cookie.remUser.value}" placeholder="vd: gv_namhn hoặc he180001" required />
                 </div>
                 <div class="form-group">
                     <label>Mật khẩu:</label>
                     <input type="password" name="password" placeholder="Mặc định: 123456" required />
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                    <input type="checkbox" name="remember" id="remember" value="yes" ${not empty cookie.remUser ? "checked" : ""} style="width: auto; margin: 0; cursor: pointer;" />
+                    <label for="remember" style="margin: 0; font-size: 13px; color: #94a3b8; cursor: pointer;">Ghi nhớ đăng nhập (Remember Me Cookie)</label>
                 </div>
                 <button type="submit">Đăng Nhập</button>
             </form>

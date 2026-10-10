@@ -11,18 +11,16 @@ public class DBContext {
         try {
             // Thay đổi user và password theo tài khoản SQL Server của bạn
             
-            // dtb cua Danh
             String user = "sa";
-            String pass = "sa123";
-            
-//            String user = "sa";
-//            String pass = "Thinhkhung@@123"; 
-            String url = "jdbc:sqlserver://localhost:1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
+            String pass = "123456@Password";
+            String host = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
+            String url = "jdbc:sqlserver://" + host + ":1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
 
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             connection = DriverManager.getConnection(url, user, pass);
         } catch (ClassNotFoundException | SQLException ex) {
             System.err.println("Lỗi kết nối CSDL: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
     public static void main(String[] args) {

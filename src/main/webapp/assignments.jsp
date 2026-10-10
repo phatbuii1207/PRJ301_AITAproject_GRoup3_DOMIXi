@@ -117,6 +117,21 @@
                 </div>
             </div>
 
+            <!-- THÔNG BÁO LỖI (EXCEPTION PATH / VALIDATION) & THÀNH CÔNG -->
+            <c:if test="${not empty error}">
+                <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">⚠️</span>
+                    <div><b>Lỗi nghiệp vụ (Exception Path):</b> ${error}</div>
+                </div>
+            </c:if>
+            <c:if test="${not empty sessionScope.flashSuccess}">
+                <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">✅</span>
+                    <div>${sessionScope.flashSuccess}</div>
+                </div>
+                <c:remove var="flashSuccess" scope="session"/>
+            </c:if>
+
             <!-- FORM THÊM MỚI HOẶC CHỈNH SỬA -->
             <div class="card">
                 <h3>${not empty editAssignment ? "✏️ Chỉnh Sửa Bài Tập" : "➕ Thêm Đề Bài Mới"}</h3>
@@ -126,11 +141,11 @@
                         <input type="hidden" name="id" value="${editAssignment.assignmentId}" />
                     </c:if>
 
-                    <label>Tiêu đề bài tập:</label>
-                    <input type="text" name="title" value="${editAssignment.title}" placeholder="Nhập tiêu đề..." required />
+                    <label>Tiêu đề bài tập (Tối thiểu 5 ký tự):</label>
+                    <input type="text" name="title" value="${not empty editAssignment ? editAssignment.title : draftTitle}" placeholder="Nhập tiêu đề (vd: Assignment 3: Java Web Servlet)..." required />
 
                     <label>Mô tả chi tiết:</label>
-                    <textarea name="description" rows="3" placeholder="Nhập yêu cầu đề bài...">${editAssignment.description}</textarea>
+                    <textarea name="description" rows="3" placeholder="Nhập yêu cầu đề bài...">${not empty editAssignment ? editAssignment.description : draftDescription}</textarea>
 
                     <button type="submit">${not empty editAssignment ? "Cập Nhật" : "Lưu Bài Tập"}</button>
                     <c:if test="${not empty editAssignment}">
