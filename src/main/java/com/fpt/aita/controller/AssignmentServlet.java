@@ -33,19 +33,33 @@ public class AssignmentServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
-        if (action == null) action = "list";
+        if (action == null) {
+            action = "list";
+        }
 
         if ("delete".equals(action)) {
-            // Xử lý XÓA
             int id = Integer.parseInt(request.getParameter("id"));
-            dao.deleteAssignment(id);
-            response.sendRedirect("assignments");
-            return;
+            Assignment a = dao.getAssignmentById(id);
+
+            if (a.getLecturerId() == currentUser.getUserId()) {
+                dao.deleteAssignment(id);
+                response.sendRedirect("assignments");
+                return;
+            } else {
+                request.setAttribute("error", "Bạn không có quyền xóa bài tập này!");
+            }
+
         } else if ("edit".equals(action)) {
             // Lấy thông tin bài tập cần SỬA
             int id = Integer.parseInt(request.getParameter("id"));
             Assignment a = dao.getAssignmentById(id);
-            request.setAttribute("editAssignment", a);
+
+            if (a.getLecturerId() == currentUser.getUserId()) {
+                request.setAttribute("editAssignment", a);
+            } else {
+                request.setAttribute("error", "Bạn không có quyền sửa bài tập này!");
+            }
+
         }
 
         // Mặc định: Hiển thị danh sách (READ)

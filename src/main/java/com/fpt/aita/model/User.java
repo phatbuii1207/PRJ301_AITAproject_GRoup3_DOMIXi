@@ -1,6 +1,7 @@
 package com.fpt.aita.model;
 
 public class User {
+
     private int userId;
     private String username;
     private String passwordHash;

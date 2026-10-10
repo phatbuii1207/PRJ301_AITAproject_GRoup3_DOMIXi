@@ -10,8 +10,13 @@ public class DBContext {
     public DBContext() {
         try {
             // Thay đổi user và password theo tài khoản SQL Server của bạn
+            
+            // dtb cua Danh
             String user = "sa";
-            String pass = "Thinhkhung@@123"; 
+            String pass = "sa123";
+            
+//            String user = "sa";
+//            String pass = "Thinhkhung@@123"; 
             String url = "jdbc:sqlserver://localhost:1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
 
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");

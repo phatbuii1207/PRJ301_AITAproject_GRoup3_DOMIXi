@@ -12,20 +12,20 @@ public class AssignmentDAO extends DBContext {
     public List<Assignment> getAllAssignments() {
         List<Assignment> list = new ArrayList<>();
         String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.title, a.description, a.created_at "
-                   + "FROM ASSIGNMENTS a "
-                   + "JOIN USERS u ON a.lecturer_id = u.user_id "
-                   + "ORDER BY a.assignment_id DESC";
+                + "FROM ASSIGNMENTS a "
+                + "JOIN USERS u ON a.lecturer_id = u.user_id "
+                + "ORDER BY a.assignment_id DESC";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Assignment(
-                    rs.getInt("assignment_id"),
-                    rs.getInt("lecturer_id"),
-                    rs.getString("full_name"),
-                    rs.getString("title"),
-                    rs.getString("description"),
-                    rs.getTimestamp("created_at")
+                        rs.getInt("assignment_id"),
+                        rs.getInt("lecturer_id"),
+                        rs.getString("full_name"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        rs.getTimestamp("created_at")
                 ));
             }
         } catch (Exception e) {
@@ -37,21 +37,21 @@ public class AssignmentDAO extends DBContext {
     // 2. READ: Tìm 1 bài tập theo ID (dùng khi bấm nút "Sửa")
     public Assignment getAssignmentById(int id) {
         String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.title, a.description, a.created_at "
-                   + "FROM ASSIGNMENTS a "
-                   + "JOIN USERS u ON a.lecturer_id = u.user_id "
-                   + "WHERE a.assignment_id = ?";
+                + "FROM ASSIGNMENTS a "
+                + "JOIN USERS u ON a.lecturer_id = u.user_id "
+                + "WHERE a.assignment_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return new Assignment(
-                    rs.getInt("assignment_id"),
-                    rs.getInt("lecturer_id"),
-                    rs.getString("full_name"),
-                    rs.getString("title"),
-                    rs.getString("description"),
-                    rs.getTimestamp("created_at")
+                        rs.getInt("assignment_id"),
+                        rs.getInt("lecturer_id"),
+                        rs.getString("full_name"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        rs.getTimestamp("created_at")
                 );
             }
         } catch (Exception e) {
