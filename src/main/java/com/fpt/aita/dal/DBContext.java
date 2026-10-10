@@ -17,7 +17,15 @@ public class DBContext {
             String url = "jdbc:sqlserver://" + host + ":1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
 
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            connection = DriverManager.getConnection(url, user, pass);
+            try {
+                connection = DriverManager.getConnection(url, user, pass);
+            } catch (SQLException ex) {
+                try {
+                    connection = DriverManager.getConnection(url, user, "123456@Password");
+                } catch (SQLException ex2) {
+                    throw ex;
+                }
+            }
         } catch (ClassNotFoundException | SQLException ex) {
             System.err.println("Lỗi kết nối CSDL: " + ex.getMessage());
             ex.printStackTrace();
