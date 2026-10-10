@@ -1,80 +1,524 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Trang chủ - AITA Code Analysis</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                background: #0f172a;
-                color: #fff;
-                padding: 40px;
-            }
-            .container {
-                max-width: 800px;
-                margin: 0 auto;
-                background: #1e293b;
-                padding: 30px;
-                border-radius: 12px;
-            }
-            .badge {
-                background: #0284c7;
-                padding: 4px 10px;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-            .btn-logout {
-                background: #ef4444;
-                color: #fff;
-                text-decoration: none;
-                padding: 8px 16px;
-                border-radius: 6px;
-                display: inline-block;
-                margin-top: 20px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <c:choose>
-                <c:when test="${not empty sessionScope.currentUser}">
-                    <h2>🎉 Đăng nhập thành công từ SQL Server!</h2>
-                    <p>Xin chào: <b>${sessionScope.currentUser.fullName}</b></p>
-                    <p>Tên tài khoản: <code>${sessionScope.currentUser.username}</code></p>
-                    <p>Vai trò hệ thống: <span class="badge">${sessionScope.currentUser.role}</span></p>
-                        <c:if test="${sessionScope.currentUser.classId != null}">
-                        <p>Mã lớp ID: <b>#${sessionScope.currentUser.classId}</b></p>
-                    </c:if>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - EduNext Style</title>
+    <style>
+        :root {
+            --bg-color: #f5f7f9;
+            --sidebar-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary-color: #5a67d8; /* Indigo active color */
+            --border-color: #e5e7eb;
+        }
 
-                    <hr style="border-color: #334155; margin: 25px 0;"/>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
 
-                    <div style="margin-bottom: 25px;">
-                        <h3>Lối tắt theo phân quyền (Role Navigation):</h3>
-                        <c:choose>
-                            <c:when test="${sessionScope.currentUser.role == 'Lecturer'}">
-                                <a href="assignments" style="background: #0284c7; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; display: inline-block;">
-                                    📚 Đi đến Quản Lý Đề Bài Tập (CRUD Giảng Viên) &rarr;
-                                </a>
-                            </c:when>
-                            <c:otherwise>
-                                <a href="student-assignments" style="background: #0284c7; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; display: inline-block;">
-                                    💻 Đi đến Danh Sách Bài Tập & Nộp Bài (Sinh Viên) &rarr;
-                                </a>
-                            </c:otherwise>
-                        </c:choose>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 72px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            font-weight: bold;
+            font-size: 11px;
+            color: #f26522;
+            text-align: center;
+            margin-bottom: 30px;
+            cursor: pointer;
+        }
+        
+        .sidebar-logo span { color: #0076c8; }
+
+        .nav-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-icon:hover, .nav-icon.active {
+            background-color: #f3f4f6;
+            color: var(--text-main);
+        }
+        
+        .nav-icon svg { width: 22px; height: 22px; stroke-width: 1.5; }
+
+        .nav-bottom {
+            margin-top: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 72px;
+            padding: 20px 40px;
+        }
+
+        /* Top Tabs */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .tab-btn {
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logout-btn {
+            position: absolute;
+            right: 0;
+            font-size: 14px;
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Header Area */
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .welcome-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        /* Alert Box */
+        .info-alert {
+            background-color: #eff6ff;
+            color: #3b82f6;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        /* Content Layout */
+        .content-layout {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        /* Left Filter Sidebar */
+        .filter-sidebar {
+            width: 220px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px 0;
+            flex-shrink: 0;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px 12px;
+            font-weight: 700;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .filter-header .badge {
+            background: #f3f4f6;
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .filter-group {
+            padding: 12px 20px 0;
+        }
+
+        .filter-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            margin-top: 12px;
+        }
+
+        .filter-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .filter-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .filter-item.active {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        /* Right Courses Area */
+        .courses-area {
+            flex: 1;
+        }
+
+        .search-bar {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .search-bar input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        /* Course Card */
+        .course-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .course-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .tag-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .tag-blue { background-color: #e0e7ff; color: #4f46e5; }
+        .tag-green { background-color: #dcfce7; color: #16a34a; }
+        .tag-purple { background-color: #f3e8ff; color: #9333ea; }
+        .tag-orange { background-color: #ffedd5; color: #ea580c; }
+
+        .card-badge {
+            background: #f3f4f6;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .course-code {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .course-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .course-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            flex-grow: 1;
+            margin-bottom: 20px;
+        }
+
+        .card-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-start {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: color 0.2s;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .btn-start:hover {
+            color: var(--primary-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-logo">FPT<br><span>Education</span></div>
+        
+        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></div>
+        <div class="nav-icon active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div>
+        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
+        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+        
+        <div class="nav-icon nav-bottom"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Tabs -->
+        <div class="top-nav">
+            <a href="#" class="tab-btn active">Courses</a>
+            <a href="#" class="tab-btn">Projects</a>
+            <a href="#" class="tab-btn">Title Confirmation</a>
+            <a href="#" class="tab-btn">Reference</a>
+            
+            <a href="logout" class="logout-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Logout
+            </a>
+        </div>
+
+        <!-- Header -->
+        <div class="header-area">
+            <div>
+                <div class="welcome-text">Welcome back, ${not empty sessionScope.currentUser ? sessionScope.currentUser.fullName : 'Student'}</div>
+                <h1 class="page-title">My Courses</h1>
+            </div>
+            <button class="refresh-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Refresh
+            </button>
+        </div>
+
+        <!-- Info Alert -->
+        <div class="info-alert">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Cached 0 min ago. Data auto-refreshes every 60 min.
+        </div>
+
+        <!-- Layout Body -->
+        <div class="content-layout">
+            
+            <!-- Left Filter -->
+            <div class="filter-sidebar">
+                <div class="filter-header">
+                    Semesters <span class="badge">6</span>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-item">TRIAL</div>
+                    
+                    <div class="filter-title">SUMMER</div>
+                    <div class="filter-item">2026</div>
+                    <div class="filter-item">2025</div>
+                    
+                    <div class="filter-title">SPRING</div>
+                    <div class="filter-item">2026</div>
+                    
+                    <div class="filter-title">FALL</div>
+                    <div class="filter-item active">2026</div>
+                    <div class="filter-item">2025</div>
+                </div>
+            </div>
+
+            <!-- Right Courses -->
+            <div class="courses-area">
+                <div class="search-bar">
+                    <svg fill="none" stroke="#9ca3af" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" placeholder="Search courses...">
+                </div>
+
+                <div class="courses-grid">
+                    
+                    <!-- Card 1: PRJ301 -->
+                    <div class="course-card">
+                        <div class="card-header">
+                            <div class="tag-icon tag-blue">JW</div>
+                            <div class="card-badge">TECH</div>
+                        </div>
+                        <div class="course-code">PRJ301</div>
+                        <div class="course-title">Java Web Application Development</div>
+                        <div class="course-subtitle">Phát triển ứng dụng Web với Java</div>
+                        <div class="card-footer">
+                            <a href="course_detail.jsp?courseId=PRJ301" class="btn-start">
+                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </a>
+                        </div>
                     </div>
 
-                    <p style="color: #94a3b8; font-size: 13px;"><i>Hệ thống kết nối trực tiếp CSDL <b>AST_CodeAnalysisDB</b> thông qua JDBC Driver.</i></p>
-                    <a href="logout" class="btn-logout">🚪 Đăng Xuất</a>
-                </c:when>
-                <c:otherwise>
-                    <h2>⚠️ Bạn chưa đăng nhập</h2>
-                    <p>Vui lòng đăng nhập để truy cập hệ thống AITA.</p>
-                    <a href="login" style="background: #0284c7; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; display: inline-block;">Đăng nhập ngay</a>
-                </c:otherwise>
-            </c:choose>
+                    <!-- Card 2: CSD201 -->
+                    <div class="course-card">
+                        <div class="card-header">
+                            <div class="tag-icon tag-green">DS</div>
+                            <div class="card-badge">TECH</div>
+                        </div>
+                        <div class="course-code">CSD201</div>
+                        <div class="course-title">Data Structures and Algorithm</div>
+                        <div class="course-subtitle">Cấu trúc dữ liệu và giải thuật</div>
+                        <div class="card-footer">
+                            <a href="course_detail.jsp?courseId=CSD201" class="btn-start">
+                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: PRO192 -->
+                    <div class="course-card">
+                        <div class="card-header">
+                            <div class="tag-icon tag-purple">OP</div>
+                            <div class="card-badge">TECH</div>
+                        </div>
+                        <div class="course-code">PRO192</div>
+                        <div class="course-title">Object-Oriented Programming</div>
+                        <div class="course-subtitle">Lập trình hướng đối tượng</div>
+                        <div class="card-footer">
+                            <a href="course_detail.jsp?courseId=PRO192" class="btn-start">
+                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: DBI202 -->
+                    <div class="course-card">
+                        <div class="card-header">
+                            <div class="tag-icon tag-orange">DB</div>
+                            <div class="card-badge">TECH</div>
+                        </div>
+                        <div class="course-code">DBI202</div>
+                        <div class="course-title">Database Systems</div>
+                        <div class="course-subtitle">Hệ cơ sở dữ liệu</div>
+                        <div class="card-footer">
+                            <a href="course_detail.jsp?courseId=DBI202" class="btn-start">
+                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
         </div>
-    </body>
+    </div>
+
+</body>
 </html>
