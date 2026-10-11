@@ -5,3 +5,4 @@ target/
 .netbeans_automatic_build
 nbproject/private/
 .idea/
+.~lock.*

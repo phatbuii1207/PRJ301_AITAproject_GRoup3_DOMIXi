@@ -13,6 +13,7 @@ public class DBContext {
             
             String user = "sa";
             String pass = "123456";
+
             String host = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
             String url = "jdbc:sqlserver://" + host + ":1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
 

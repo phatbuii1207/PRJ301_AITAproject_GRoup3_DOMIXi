@@ -1,110 +1,255 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Đăng nhập - AITA Static Code Analysis</title>
-        <style>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - MIXI ASSIGN</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #ffffff;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            flex: 1;
+            background-color: #d4efff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .left-panel .logo-img {
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .left-panel h1 {
+            color: #0076c8;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .left-panel p {
+            color: #005a9e;
+            font-size: 15px;
+            max-width: 380px;
+            line-height: 1.6;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            background-color: #ffffff;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 0 20px;
+        }
+
+        .brand-logo {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 24px;
+        }
+        
+        .brand-logo .m { color: #f26522; }
+        .brand-logo .i1 { color: #0076c8; }
+        .brand-logo .x { color: #0076c8; }
+        .brand-logo .i2 { color: #0076c8; }
+        .brand-logo .assign { color: #0076c8; margin-left: 5px;}
+
+        h2 {
+            font-size: 24px;
+            color: #111;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .error-message {
+            background-color: #ffeef0;
+            color: #dc3545;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #dcdfe6;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #0076c8;
+        }
+
+        .form-control::placeholder {
+            color: #999;
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 13px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            color: #555;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            margin-right: 8px;
+        }
+
+        .forgot-password {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 30px;
+        }
+
+        .btn-submit:hover {
+            background-color: #155db2;
+        }
+
+        .register-link {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .register-link a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
             body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                background: #0f172a;
-                color: #fff;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
+                flex-direction: column;
             }
-            .login-card {
-                background: #1e293b;
-                padding: 40px;
-                border-radius: 12px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-                width: 360px;
-            }
-            h2 {
-                text-align: center;
-                color: #38bdf8;
-                margin-bottom: 24px;
-            }
-            .form-group {
-                margin-bottom: 18px;
-            }
-            label {
-                display: block;
-                margin-bottom: 6px;
-                font-size: 14px;
-                color: #94a3b8;
-            }
-            input {
+            .left-panel, .right-panel {
+                flex: none;
                 width: 100%;
-                padding: 10px;
-                border-radius: 6px;
-                border: 1px solid #334155;
-                background: #0f172a;
-                color: #fff;
-                box-sizing: border-box;
+                min-height: 50vh;
             }
-            button {
-                width: 100%;
-                padding: 12px;
-                background: #0284c7;
-                color: #fff;
-                border: none;
-                border-radius: 6px;
-                font-weight: bold;
-                cursor: pointer;
-                font-size: 16px;
-                margin-top: 10px;
-            }
-            button:hover {
-                background: #0369a1;
-            }
-            .error {
-                color: #f87171;
-                background: rgba(239,68,68,0.1);
-                padding: 10px;
-                border-radius: 6px;
-                margin-bottom: 16px;
-                font-size: 14px;
-                text-align: center;
-            }
-            .demo-box {
-                margin-top: 20px;
-                font-size: 12px;
-                color: #64748b;
-                border-top: 1px solid #334155;
-                padding-top: 12px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="login-card">
-            <h2>AITA Portal</h2>
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+        <div class="logo-img">
+            <span>EduNext Learning</span>
+        </div>
+        <h1>MIXI ASSIGN</h1>
+        <p>Nền tảng học tập kiến tạo xã hội. Kết nối Giảng viên và<br>Sinh viên thông qua phương pháp học tập chủ động.</p>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+        <div class="login-container">
+            <div class="brand-logo">
+                <span class="m">M</span><span class="i1">I</span><span class="x">X</span><span class="i2">I</span> <span class="assign">ASSIGN</span>
+            </div>
+            
+            <h2>Chào mừng trở lại! 👋</h2>
+            <p class="subtitle">Vui lòng đăng nhập để tiếp tục vào hệ thống</p>
+
             <c:if test="${not empty error}">
-                <div class="error">${error}</div>
+                <div class="error-message">
+                    ${error}
+                </div>
             </c:if>
+
             <form action="login" method="POST">
                 <div class="form-group">
-                    <label>Tên đăng nhập:</label>
-                    <input type="text" name="username" value="${cookie.remUser.value}" placeholder="vd: gv_namhn hoặc he180001" required />
+                    <input type="text" name="username" class="form-control" value="${cookie.remUser.value}" placeholder="Tên đăng nhập (Mã SV / GV)" required />
                 </div>
+                
                 <div class="form-group">
-                    <label>Mật khẩu:</label>
-                    <input type="password" name="password" placeholder="Mặc định: 123456" required />
+                    <input type="password" name="password" class="form-control" placeholder="Mật khẩu" required />
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                    <input type="checkbox" name="remember" id="remember" value="yes" ${not empty cookie.remUser ? "checked" : ""} style="width: auto; margin: 0; cursor: pointer;" />
-                    <label for="remember" style="margin: 0; font-size: 13px; color: #94a3b8; cursor: pointer;">Ghi nhớ đăng nhập (Remember Me Cookie)</label>
+                
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember" id="remember" value="yes" ${not empty cookie.remUser ? "checked" : ""}>
+                        Ghi nhớ đăng nhập
+                    </label>
+                    <a href="#" class="forgot-password">Quên mật khẩu?</a>
                 </div>
-                <button type="submit">Đăng Nhập</button>
+                
+                <button type="submit" class="btn-submit">Đăng nhập</button>
             </form>
-            <div class="demo-box">
-                <b>Tài khoản test trong SQL:</b><br/>
-                - Giảng viên: <code>gv_namhn</code> / <code>123456</code><br/>
-                - Sinh viên: <code>he180001</code> / <code>123456</code>
+
+            <div class="register-link">
+                Chưa có tài khoản? <a href="#">Đăng ký ngay</a>
             </div>
         </div>
-    </body>
+    </div>
+
+</body>
 </html>
