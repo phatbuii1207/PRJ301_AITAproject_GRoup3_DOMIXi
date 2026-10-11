@@ -252,6 +252,161 @@
             font-size: 15px;
         }
 
+        /* Status Badges */
+        .badge-submitted {
+            background: #dcfce7;
+            color: #166534;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        /* Modal Backdrop & Box */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            width: 92%;
+            max-width: 520px;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 26px;
+            color: #94a3b8;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+        }
+        .btn-close:hover { color: #1e293b; }
+
+        /* Drag & Drop Zone */
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            padding: 34px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 16px;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #0076c8;
+            background: #eff6ff;
+            box-shadow: 0 0 0 4px rgba(0, 118, 200, 0.1);
+        }
+
+        .drop-icon {
+            color: #0076c8;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .drop-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .drop-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .drop-browse {
+            color: #0076c8;
+            font-weight: 600;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .drop-types {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        /* File Preview Card */
+        .file-preview-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .btn-remove-file {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .btn-remove-file:hover {
+            color: #ef4444;
+            background: #fee2e2;
+        }
+
     </style>
 </head>
 <body>
@@ -344,11 +499,15 @@
                                 <th>Tiêu Đề & Mô Tả</th>
                                 <th>Giảng Viên</th>
                                 <th>Hạn Nộp</th>
+                                <c:if test="${sessionScope.currentUser.role == 'Student'}">
+                                    <th>Trạng Thái</th>
+                                </c:if>
                                 <th>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             <c:forEach items="${assignmentList}" var="a">
+                                <c:set var="sub" value="${submissionMap[a.assignmentId]}" />
                                 <tr>
                                     <td style="color: var(--text-muted);">#${a.assignmentId}</td>
                                     <td>
@@ -364,6 +523,24 @@
                                             </c:choose>
                                         </span>
                                     </td>
+                                    <c:if test="${sessionScope.currentUser.role == 'Student'}">
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty sub}">
+                                                    <span class="badge-submitted">✅ Đã nộp bài</span>
+                                                    <div style="font-size:12px; color:#334155; margin-top:5px; display:flex; align-items:center; gap:4px;">
+                                                        <span>📁</span> <b>${sub.fileNameOnly}</b> <span style="color:#64748b;">(${sub.formattedFileSize})</span>
+                                                    </div>
+                                                    <div style="font-size:11px; color:#0284c7; margin-top:3px;" title="Mã băm SHA-256 toàn vẹn: ${sub.sha256Hash}">
+                                                        SHA: <code>${sub.sha256Hash.substring(0, 14)}...</code>
+                                                    </div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge-pending">⏳ Chưa nộp</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </c:if>
                                     <td>
                                         <!-- PHÂN QUYỀN GIẢNG VIÊN -->
                                         <c:if test="${sessionScope.currentUser.role == 'Lecturer'}">
@@ -377,12 +554,20 @@
 
                                         <!-- PHÂN QUYỀN SINH VIÊN -->
                                         <c:if test="${sessionScope.currentUser.role == 'Student'}">
-                                            <form action="course" method="POST" style="display:inline;">
-                                                <input type="hidden" name="action" value="submit_assignment" />
-                                                <input type="hidden" name="assignmentId" value="${a.assignmentId}" />
-                                                <input type="hidden" name="courseId" value="${courseId}" />
-                                                <button type="submit" class="btn btn-primary">Nộp Bài</button>
-                                            </form>
+                                            <c:choose>
+                                                <c:when test="${not empty sub}">
+                                                    <button type="button" class="btn btn-secondary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                        Nộp lại
+                                                    </button>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <button type="button" class="btn btn-primary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                        Nộp Bài
+                                                    </button>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </c:if>
                                     </td>
                                 </tr>
@@ -399,5 +584,184 @@
         </div>
         
     </div>
+
+    <!-- ============================================================= -->
+    <!-- MODAL NỘP BÀI TẬP KÉO THẢ TỆP (DRAG & DROP SUBMISSION MODAL)   -->
+    <!-- ============================================================= -->
+    <div id="submitModal" class="modal-backdrop" style="display: none;" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalTitle" style="margin:0; font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22" style="color: var(--primary-color);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Nộp Bài Tập
+                    </h3>
+                    <p id="modalSubTitle" style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);"></p>
+                </div>
+                <button type="button" class="btn-close" onclick="closeSubmitModal()">&times;</button>
+            </div>
+            
+            <form id="submissionForm" action="course" method="POST" enctype="multipart/form-data" onsubmit="return validateBeforeSubmit();">
+                <input type="hidden" name="action" value="submit_assignment" />
+                <input type="hidden" name="courseId" value="${courseId}" />
+                <input type="hidden" name="assignmentId" id="modalAssignmentId" value="" />
+                
+                <!-- VÙNG KÉO & THẢ FILE (DRAG & DROP ZONE) -->
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" name="file" id="modalFileInput" style="display: none;" onchange="handleFileSelected(this.files)" required />
+                    
+                    <div class="drop-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="46" height="46"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    </div>
+                    <div class="drop-title">Kéo & thả file bài làm vào đây</div>
+                    <div class="drop-sub">hoặc <span class="drop-browse" onclick="triggerFileInput(event)">chọn tệp từ máy tính</span></div>
+                    <div class="drop-types">Hỗ trợ: .zip, .rar, .tar.gz, .java, .pdf, .docx, .sql (Tối đa 50MB)</div>
+                </div>
+
+                <!-- KHUNG XEM TRƯỚC FILE ĐÃ CHỌN -->
+                <div class="file-preview-card" id="filePreviewCard" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
+                        <div style="width: 42px; height: 42px; border-radius: 8px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                            📄
+                        </div>
+                        <div style="overflow: hidden;">
+                            <div id="previewFileName" style="font-weight: 700; font-size: 14px; color: #1e293b; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">filename.zip</div>
+                            <div id="previewFileSize" style="font-size: 12px; color: #64748b; margin-top: 2px;">1.2 MB</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-remove-file" onclick="removeSelectedFile(event)" title="Xóa file & chọn lại">&times;</button>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeSubmitModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitFile" disabled>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Xác Nhận Nộp Bài
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT XỬ LÝ SỰ KIỆN KÉO THẢ VÀ MODAL -->
+    <script>
+        function openSubmitModal(assignmentId, title) {
+            document.getElementById('modalAssignmentId').value = assignmentId;
+            document.getElementById('modalTitle').innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22" style="color: var(--primary-color);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Nộp Bài: #' + assignmentId;
+            document.getElementById('modalSubTitle').innerText = title || '';
+            
+            // Reset dữ liệu tệp chọn trước đó
+            removeSelectedFile();
+            
+            document.getElementById('submitModal').style.display = 'flex';
+        }
+
+        function closeSubmitModal() {
+            document.getElementById('submitModal').style.display = 'none';
+        }
+
+        function closeModalOnBackdrop(e) {
+            if (e.target.id === 'submitModal') {
+                closeSubmitModal();
+            }
+        }
+
+        function triggerFileInput(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            document.getElementById('modalFileInput').click();
+        }
+
+        function handleFileSelected(files) {
+            if (files && files.length > 0) {
+                const file = files[0];
+                document.getElementById('previewFileName').innerText = file.name;
+                
+                let sizeStr = '';
+                if (file.size < 1024) sizeStr = file.size + ' B';
+                else if (file.size < 1024 * 1024) sizeStr = (file.size / 1024).toFixed(1) + ' KB';
+                else sizeStr = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+                document.getElementById('previewFileSize').innerText = sizeStr;
+                
+                document.getElementById('dropZone').style.display = 'none';
+                document.getElementById('filePreviewCard').style.display = 'flex';
+                document.getElementById('btnSubmitFile').disabled = false;
+            }
+        }
+
+        function removeSelectedFile(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const fileInput = document.getElementById('modalFileInput');
+            if (fileInput) fileInput.value = '';
+            
+            const dropZone = document.getElementById('dropZone');
+            const preview = document.getElementById('filePreviewCard');
+            const submitBtn = document.getElementById('btnSubmitFile');
+            
+            if (dropZone) dropZone.style.display = 'block';
+            if (preview) preview.style.display = 'none';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Xác Nhận Nộp Bài';
+            }
+        }
+
+        function validateBeforeSubmit() {
+            const fileInput = document.getElementById('modalFileInput');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('Vui lòng kéo thả hoặc chọn tệp bài làm trước khi nộp!');
+                return false;
+            }
+            const btn = document.getElementById('btnSubmitFile');
+            btn.disabled = true;
+            btn.innerHTML = 'Đang tải lên & tính SHA-256...';
+            return true;
+        }
+
+        // Thiết lập sự kiện Drag & Drop native trên Drop-Zone
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('modalFileInput');
+            if (!dropZone || !fileInput) return;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function() {
+                    dropZone.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function() {
+                    dropZone.classList.remove('drag-over');
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    fileInput.files = dt.files;
+                    handleFileSelected(dt.files);
+                }
+            }, false);
+
+            dropZone.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('drop-browse')) {
+                    fileInput.click();
+                }
+            });
+        });
+    </script>
 </body>
 </html>

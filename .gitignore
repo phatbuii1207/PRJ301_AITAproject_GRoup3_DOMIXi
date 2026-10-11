@@ -6,3 +6,6 @@ target/
 nbproject/private/
 .idea/
 .~lock.*
+/src/main/webapp/uploads/*
+!/src/main/webapp/uploads/submissions/
+!/src/main/webapp/uploads/submissions/.gitkeep

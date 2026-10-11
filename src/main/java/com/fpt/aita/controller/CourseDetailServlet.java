@@ -1,9 +1,17 @@
 package com.fpt.aita.controller;
 
 import com.fpt.aita.dal.AssignmentDAO;
+import com.fpt.aita.dal.SubmissionDAO;
 import com.fpt.aita.model.Assignment;
+import com.fpt.aita.model.Submission;
 import com.fpt.aita.model.User;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -11,20 +19,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.Part;
 
 /**
  * THÀNH VIÊN 3: CHI TIẾT MÔN HỌC & PHÂN QUYỀN BÀI TẬP
  * Servlet: /course
+ * Hỗ trợ Upload File Kéo Thả (Drag & Drop) & Lưu Database SUBMISSIONS
  */
 @WebServlet(name = "CourseDetailServlet", urlPatterns = {"/course"})
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB bộ nhớ đệm
+    maxFileSize = 1024 * 1024 * 50,       // 50MB tối đa mỗi tệp
+    maxRequestSize = 1024 * 1024 * 100    // 100MB tối đa toàn request
+)
 public class CourseDetailServlet extends HttpServlet {
 
     private AssignmentDAO assignmentDAO = new AssignmentDAO();
+    private SubmissionDAO submissionDAO = new SubmissionDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -69,8 +86,13 @@ public class CourseDetailServlet extends HttpServlet {
         List<Assignment> assignmentList = assignmentDAO.getAssignmentsByCourse(courseId);
         request.setAttribute("assignmentList", assignmentList);
 
-        // 5. Chuyển tiếp sang view hiển thị chi tiết môn học
-        // (TV4 sẽ thiết kế course_detail.jsp theo phong cách EduNext)
+        // 5. Lấy danh sách bài nộp của sinh viên nếu là Student
+        if ("Student".equalsIgnoreCase(currentUser.getRole())) {
+            Map<Integer, Submission> submissionMap = submissionDAO.getStudentSubmissionsForCourse(currentUser.getUserId(), courseId);
+            request.setAttribute("submissionMap", submissionMap);
+        }
+
+        // 6. Chuyển tiếp sang view hiển thị chi tiết môn học
         request.getRequestDispatcher("course_detail.jsp").forward(request, response);
     }
 
@@ -164,24 +186,101 @@ public class CourseDetailServlet extends HttpServlet {
             }
         } 
         // =====================================================================
-        // PHÂN QUYỀN 2: SINH VIÊN (STUDENT)
+        // PHÂN QUYỀN 2: SINH VIÊN (STUDENT) - UPLOAD KÉO THẢ & LƯU CSDL
         // =====================================================================
         else if ("Student".equalsIgnoreCase(currentUser.getRole())) {
             if ("submit_assignment".equals(action)) {
-                // Sinh viên nộp bài tập
                 String assignmentIdStr = request.getParameter("assignmentId");
-                String fileName = request.getParameter("fileName");
-                if (fileName == null || fileName.trim().isEmpty()) {
-                    fileName = "Submission_" + currentUser.getUsername() + ".zip";
+                int assignmentId = 0;
+                try {
+                    if (assignmentIdStr != null && !assignmentIdStr.trim().isEmpty()) {
+                        assignmentId = Integer.parseInt(assignmentIdStr.trim());
+                    }
+                } catch (NumberFormatException ignored) {}
+
+                Part filePart = null;
+                try {
+                    filePart = request.getPart("file");
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
-                // Tạo mã băm SHA-256 an toàn
-                String sha256 = Long.toHexString(Double.doubleToLongBits(Math.random()))
-                              + Long.toHexString(System.currentTimeMillis()) + "e7b9";
-                if (sha256.length() > 64) sha256 = sha256.substring(0, 64);
+                if (filePart != null && filePart.getSize() > 0) {
+                    try {
+                        String submittedName = filePart.getSubmittedFileName();
+                        String originalFileName = Paths.get(submittedName).getFileName().toString();
+                        long fileSize = filePart.getSize();
 
-                session.setAttribute("flashSuccess", "🎉 Sinh viên " + currentUser.getFullName() 
-                        + " đã nộp bài thành công (Mã SHA-256: " + sha256.substring(0, 16) + "...)!");
+                        // 1. Tính toán mã băm SHA-256 từ nội dung byte thực tế của tệp
+                        MessageDigest md = MessageDigest.getInstance("SHA-256");
+                        try (InputStream is = filePart.getInputStream()) {
+                            byte[] buffer = new byte[8192];
+                            int read;
+                            while ((read = is.read(buffer)) != -1) {
+                                md.update(buffer, 0, read);
+                            }
+                        }
+                        byte[] hashBytes = md.digest();
+                        StringBuilder sb = new StringBuilder();
+                        for (byte b : hashBytes) {
+                            sb.append(String.format("%02x", b));
+                        }
+                        String sha256 = sb.toString();
+
+                        // 2. Thư mục lưu trữ tệp trên server (/uploads/submissions)
+                        String uploadDirReal = request.getServletContext().getRealPath("/uploads/submissions");
+                        if (uploadDirReal == null) {
+                            uploadDirReal = System.getProperty("user.dir") + "/uploads/submissions";
+                        }
+                        File uploadDir = new File(uploadDirReal);
+                        if (!uploadDir.exists()) {
+                            uploadDir.mkdirs();
+                        }
+
+                        // 3. Đặt tên tệp an toàn tránh xung đột
+                        String cleanName = originalFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+                        String safeFileName = System.currentTimeMillis() + "_" + currentUser.getUsername() + "_" + cleanName;
+                        File destFile = new File(uploadDir, safeFileName);
+                        filePart.write(destFile.getAbsolutePath());
+
+                        // 4. Đồng bộ thêm bản sao vào thư mục dự án nếu khả dụng
+                        try {
+                            String realCtx = request.getServletContext().getRealPath("/");
+                            if (realCtx != null && realCtx.contains("target")) {
+                                String srcPath = realCtx.substring(0, realCtx.indexOf("target")) + "src/main/webapp/uploads/submissions";
+                                File srcDir = new File(srcPath);
+                                if (!srcDir.exists()) srcDir.mkdirs();
+                                Files.copy(destFile.toPath(), new File(srcDir, safeFileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            }
+                        } catch (Exception ignored) {}
+
+                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL SQL Server
+                        Submission sub = new Submission();
+                        sub.setStudentId(currentUser.getUserId());
+                        sub.setAssignmentId(assignmentId);
+                        sub.setFilePath("/uploads/submissions/" + safeFileName);
+                        sub.setSha256Hash(sha256);
+                        sub.setFileSize((int) fileSize);
+                        sub.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
+                        sub.setStatus("Completed");
+
+                        boolean ok = submissionDAO.insertSubmission(sub);
+                        if (ok) {
+                            session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + currentUser.getFullName() 
+                                    + "</b> đã nộp bài thành công tệp <b>" + originalFileName + "</b> (" 
+                                    + sub.getFormattedFileSize() + ")!<br/>"
+                                    + "• Mã băm SHA-256: <code style='font-size:12px; font-weight:600;'>" + sha256 + "</code><br/>"
+                                    + "• Đã ghi nhận vào Cơ sở dữ liệu SQL Server (bảng <code>SUBMISSIONS</code>).");
+                        } else {
+                            session.setAttribute("flashError", "Lỗi CSDL: Không thể lưu thông tin bài nộp vào database.");
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        session.setAttribute("flashError", "Lỗi xử lý nộp bài: " + e.getMessage());
+                    }
+                } else {
+                    session.setAttribute("flashError", "Vui lòng chọn hoặc kéo thả tệp bài làm trước khi nộp!");
+                }
             }
         }
 
@@ -208,20 +307,20 @@ public class CourseDetailServlet extends HttpServlet {
                 break;
             case 3:
                 c.put("code", "PRO192");
-                c.put("name", "Object-Oriented Programming with Java");
-                c.put("description", "Lập trình hướng đối tượng với Java: OOP principles, Polymorphism, Collections.");
+                c.put("name", "Object-Oriented Programming (Java)");
+                c.put("description", "Lập trình hướng đối tượng, Kế thừa, Đa hình, Java Collections Framework.");
                 c.put("totalSlots", 30);
                 break;
             case 4:
                 c.put("code", "DBI202");
                 c.put("name", "Introduction to Databases");
-                c.put("description", "Cơ sở dữ liệu quan hệ, SQL Server, Chuẩn hóa 3NF và RDBMS.");
+                c.put("description", "Cơ sở dữ liệu quan hệ, SQL Server T-SQL, Chuẩn hóa 1NF/2NF/3NF, Index.");
                 c.put("totalSlots", 30);
                 break;
             default:
                 c.put("code", "COURSE-" + courseId);
-                c.put("name", "Chuyên đề chuyên ngành #" + courseId);
-                c.put("description", "Nội dung đào tạo thực hành theo đề cương chuẩn.");
+                c.put("name", "Specialized Subject " + courseId);
+                c.put("description", "Khóa học tích hợp đào tạo chuyên sâu và phân tích mã nguồn AST.");
                 c.put("totalSlots", 30);
                 break;
         }
