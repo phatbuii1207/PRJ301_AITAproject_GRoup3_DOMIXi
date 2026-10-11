@@ -15,13 +15,7 @@ import javax.servlet.http.HttpSession;
 public class RegisterServlet extends HttpServlet {
 
     private static void redirectByRole(User user, HttpServletResponse response) throws IOException {
-        if ("Lecturer".equalsIgnoreCase(user.getRole())) {
-            response.sendRedirect("assignments");
-        } else if ("Student".equalsIgnoreCase(user.getRole())) {
-            response.sendRedirect("student-assignments");
-        } else {
-            response.sendRedirect("home.jsp");
-        }
+        response.sendRedirect("home");
     }
 
     @Override

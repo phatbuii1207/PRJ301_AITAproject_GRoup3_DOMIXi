@@ -1,5 +1,11 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<c:if test="${empty sessionScope.currentUser}">
+    <c:redirect url="login"/>
+</c:if>
+<c:if test="${courseList == null}">
+    <c:redirect url="home"/>
+</c:if>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -384,9 +390,9 @@
     <div class="main-content">
         <!-- Top Tabs -->
         <div class="top-nav">
-            <a href="#" class="tab-btn active">Courses</a>
+            <a href="home" class="tab-btn active">Courses</a>
+            <a href="assignments" class="tab-btn">Assignments (${sessionScope.currentUser.role})</a>
             <a href="#" class="tab-btn">Projects</a>
-            <a href="#" class="tab-btn">Title Confirmation</a>
             <a href="#" class="tab-btn">Reference</a>
             
             <a href="logout" class="logout-btn">
@@ -398,10 +404,10 @@
         <!-- Header -->
         <div class="header-area">
             <div>
-                <div class="welcome-text">Welcome back, ${not empty sessionScope.currentUser ? sessionScope.currentUser.fullName : 'Student'}</div>
+                <div class="welcome-text">Welcome back, <b>${not empty sessionScope.currentUser ? sessionScope.currentUser.fullName : 'Student'}</b> (${sessionScope.currentUser.role})</div>
                 <h1 class="page-title">My Courses</h1>
             </div>
-            <button class="refresh-btn">
+            <button class="refresh-btn" onclick="location.href='home'">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Refresh
             </button>
@@ -439,81 +445,54 @@
 
             <!-- Right Courses -->
             <div class="courses-area">
-                <div class="search-bar">
-                    <svg fill="none" stroke="#9ca3af" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" placeholder="Search courses...">
-                </div>
+                <form action="home" method="GET" class="search-bar">
+                    <svg fill="none" stroke="#9ca3af" viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" name="search" value="${searchKeyword}" placeholder="Search courses..." autocomplete="off">
+                    <c:if test="${not empty searchKeyword}">
+                        <a href="home" style="color:var(--text-muted); text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap; padding: 2px 6px;">✕ Xóa tìm kiếm</a>
+                    </c:if>
+                </form>
 
                 <div class="courses-grid">
-                    
-                    <!-- Card 1: PRJ301 -->
-                    <div class="course-card">
-                        <div class="card-header">
-                            <div class="tag-icon tag-blue">JW</div>
-                            <div class="card-badge">TECH</div>
-                        </div>
-                        <div class="course-code">PRJ301</div>
-                        <div class="course-title">Java Web Application Development</div>
-                        <div class="course-subtitle">Phát triển ứng dụng Web với Java</div>
-                        <div class="card-footer">
-                            <a href="course_detail.jsp?courseId=PRJ301" class="btn-start">
-                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: CSD201 -->
-                    <div class="course-card">
-                        <div class="card-header">
-                            <div class="tag-icon tag-green">DS</div>
-                            <div class="card-badge">TECH</div>
-                        </div>
-                        <div class="course-code">CSD201</div>
-                        <div class="course-title">Data Structures and Algorithm</div>
-                        <div class="course-subtitle">Cấu trúc dữ liệu và giải thuật</div>
-                        <div class="card-footer">
-                            <a href="course_detail.jsp?courseId=CSD201" class="btn-start">
-                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Card 3: PRO192 -->
-                    <div class="course-card">
-                        <div class="card-header">
-                            <div class="tag-icon tag-purple">OP</div>
-                            <div class="card-badge">TECH</div>
-                        </div>
-                        <div class="course-code">PRO192</div>
-                        <div class="course-title">Object-Oriented Programming</div>
-                        <div class="course-subtitle">Lập trình hướng đối tượng</div>
-                        <div class="card-footer">
-                            <a href="course_detail.jsp?courseId=PRO192" class="btn-start">
-                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Card 4: DBI202 -->
-                    <div class="course-card">
-                        <div class="card-header">
-                            <div class="tag-icon tag-orange">DB</div>
-                            <div class="card-badge">TECH</div>
-                        </div>
-                        <div class="course-code">DBI202</div>
-                        <div class="course-title">Database Systems</div>
-                        <div class="course-subtitle">Hệ cơ sở dữ liệu</div>
-                        <div class="card-footer">
-                            <a href="course_detail.jsp?courseId=DBI202" class="btn-start">
-                                <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </a>
-                        </div>
-                    </div>
-
+                    <c:choose>
+                        <c:when test="${not empty courseList}">
+                            <c:forEach items="${courseList}" var="c" varStatus="status">
+                                <c:set var="tagColor" value="tag-blue"/>
+                                <c:choose>
+                                    <c:when test="${status.index % 4 == 1}"><c:set var="tagColor" value="tag-green"/></c:when>
+                                    <c:when test="${status.index % 4 == 2}"><c:set var="tagColor" value="tag-purple"/></c:when>
+                                    <c:when test="${status.index % 4 == 3}"><c:set var="tagColor" value="tag-orange"/></c:when>
+                                    <c:otherwise><c:set var="tagColor" value="tag-blue"/></c:otherwise>
+                                </c:choose>
+                                <div class="course-card">
+                                    <div class="card-header">
+                                        <div class="tag-icon ${tagColor}">
+                                            <c:choose>
+                                                <c:when test="${not empty c.courseCode && c.courseCode.length() >= 2}">${c.courseCode.substring(0, 2)}</c:when>
+                                                <c:otherwise>IT</c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                        <div class="card-badge">${c.badge}</div>
+                                    </div>
+                                    <div class="course-code">${c.courseCode}</div>
+                                    <div class="course-title">${c.courseName}</div>
+                                    <div class="course-subtitle">${c.description}</div>
+                                    <div class="card-footer">
+                                        <a href="course?id=${c.courseId}" class="btn-start">
+                                            <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </c:forEach>
+                        </c:when>
+                        <c:otherwise>
+                            <div style="grid-column: 1 / -1; padding: 40px; text-align: center; background: #fff; border-radius: 12px; border: 1px solid var(--border-color); color: var(--text-muted);">
+                                <p style="font-size: 16px; margin-bottom: 12px;">Không tìm thấy môn học nào phù hợp với từ khóa "<b>${searchKeyword}</b>".</p>
+                                <a href="home" style="display: inline-block; padding: 8px 16px; background: var(--primary-color); color: #fff; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;">Xem tất cả môn học</a>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </div>
             

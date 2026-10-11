@@ -219,6 +219,13 @@
             <h2>Chào mừng trở lại! 👋</h2>
             <p class="subtitle">Vui lòng đăng nhập để tiếp tục vào hệ thống</p>
 
+            <c:if test="${not empty sessionScope.flashSuccess}">
+                <div style="background:#dcfce7; color:#166534; padding:10px 14px; border-radius:8px; margin-bottom:15px; font-size:14px; border:1px solid #bbf7d0;">
+                    ${sessionScope.flashSuccess}
+                </div>
+                <c:remove var="flashSuccess" scope="session"/>
+            </c:if>
+
             <c:if test="${not empty error}">
                 <div class="error-message">
                     ${error}
@@ -246,7 +253,7 @@
             </form>
 
             <div class="register-link">
-                Chưa có tài khoản? <a href="#">Đăng ký ngay</a>
+                Chưa có tài khoản? <a href="register">Đăng ký ngay</a>
             </div>
         </div>
     </div>

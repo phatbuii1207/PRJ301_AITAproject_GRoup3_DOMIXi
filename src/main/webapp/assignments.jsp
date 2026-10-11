@@ -112,7 +112,7 @@
                     </div>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center;">
-                    <a href="home.jsp" style="color: #38bdf8; text-decoration: none; font-size: 14px;">🏠 Về Trang Chủ</a>
+                    <a href="home" style="color: #38bdf8; text-decoration: none; font-size: 14px;">🏠 Về Trang Chủ</a>
                     <a href="logout" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 13px;">🚪 Đăng Xuất</a>
                 </div>
             </div>

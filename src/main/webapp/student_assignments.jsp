@@ -253,7 +253,7 @@
         <div class="user-meta">
             <span>Chào bạn, <b>${sessionScope.currentUser.fullName}</b> (<code>${sessionScope.currentUser.username}</code>)</span>
             <div class="nav-links">
-                <a href="home.jsp" class="btn-nav">🏠 Trang chủ</a>
+                <a href="home" class="btn-nav">🏠 Trang chủ</a>
                 <a href="logout" class="btn-nav btn-logout">🚪 Đăng xuất</a>
             </div>
         </div>

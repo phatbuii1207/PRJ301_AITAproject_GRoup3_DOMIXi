@@ -52,14 +52,8 @@ public class LoginServlet extends HttpServlet {
             cookieUser.setPath(request.getContextPath().isEmpty() ? "/" : request.getContextPath());
             response.addCookie(cookieUser);
 
-            // 3. Phân quyền chuyển hướng theo vai trò (Role-based Navigation)
-            if ("Lecturer".equalsIgnoreCase(user.getRole())) {
-                response.sendRedirect("assignments");
-            } else if ("Student".equalsIgnoreCase(user.getRole())) {
-                response.sendRedirect("student-assignments");
-            } else {
-                response.sendRedirect("home.jsp");
-            }
+            // 3. Chuyển hướng vào Cổng học tập EduNext Portal (Home)
+            response.sendRedirect("home");
         } else {
             // Đăng nhập thất bại -> Báo lỗi ra màn hình
             request.setAttribute("error", "Sai tên đăng nhập hoặc mật khẩu!");

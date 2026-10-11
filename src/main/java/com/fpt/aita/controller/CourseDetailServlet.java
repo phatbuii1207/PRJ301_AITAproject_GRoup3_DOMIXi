@@ -38,15 +38,26 @@ public class CourseDetailServlet extends HttpServlet {
             return;
         }
 
-        // 2. Tiếp nhận mã môn học (courseId)
+        // 2. Tiếp nhận mã môn học (hỗ trợ cả id, courseId dạng số và chuỗi mã môn như PRJ301)
         String courseIdStr = request.getParameter("id");
+        if (courseIdStr == null || courseIdStr.trim().isEmpty()) {
+            courseIdStr = request.getParameter("courseId");
+        }
         int courseId = 1;
         try {
             if (courseIdStr != null && !courseIdStr.trim().isEmpty()) {
-                courseId = Integer.parseInt(courseIdStr);
+                courseId = Integer.parseInt(courseIdStr.trim());
             }
         } catch (NumberFormatException e) {
-            courseId = 1;
+            if (courseIdStr != null) {
+                String upper = courseIdStr.trim().toUpperCase();
+                if (upper.contains("PRJ301")) courseId = 1;
+                else if (upper.contains("CSD201")) courseId = 2;
+                else if (upper.contains("PRO192") || upper.contains("LAB211")) courseId = 3;
+                else if (upper.contains("DBI202") || upper.contains("PRF192")) courseId = 4;
+                else if (upper.contains("WED201")) courseId = 5;
+                else courseId = 1;
+            }
         }
 
         // 3. Lấy thông tin cơ bản môn học (Hỗ trợ cấu trúc 4 môn học EduNext)
