@@ -212,6 +212,52 @@ public class CourseDetailServlet extends HttpServlet {
                 } catch (Exception e) {
                     session.setAttribute("flashError", "Lỗi xóa bài tập: " + e.getMessage());
                 }
+            } else if ("edit_assignment".equals(action)) {
+                // Giảng viên chỉnh sửa bài tập
+                try {
+                    int assignmentId = Integer.parseInt(request.getParameter("assignmentId"));
+                    String title = request.getParameter("title");
+                    String description = request.getParameter("description");
+                    String deadlineStr = request.getParameter("deadline");
+
+                    Timestamp deadline = null;
+                    if (deadlineStr != null && !deadlineStr.trim().isEmpty()) {
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
+                            Date parsedDate = sdf.parse(deadlineStr);
+                            deadline = new Timestamp(parsedDate.getTime());
+                        } catch (Exception ignored) {
+                            try {
+                                SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                Date parsedDate = sdf2.parse(deadlineStr);
+                                deadline = new Timestamp(parsedDate.getTime());
+                            } catch (Exception ignored2) {}
+                        }
+                    }
+
+                    if (title != null && !title.trim().isEmpty()) {
+                        Assignment a = assignmentDAO.getAssignmentById(assignmentId);
+                        if (a != null) {
+                            a.setTitle(title.trim());
+                            a.setDescription(description != null ? description.trim() : "");
+                            if (deadline != null) {
+                                a.setDeadline(deadline);
+                            }
+                            boolean ok = assignmentDAO.updateAssignmentFull(a);
+                            if (ok) {
+                                session.setAttribute("flashSuccess", "Đã cập nhật bài tập #" + assignmentId + " thành công!");
+                            } else {
+                                session.setAttribute("flashError", "Cập nhật bài tập thất bại.");
+                            }
+                        } else {
+                            session.setAttribute("flashError", "Không tìm thấy bài tập cần cập nhật.");
+                        }
+                    } else {
+                        session.setAttribute("flashError", "Tiêu đề bài tập không được để trống!");
+                    }
+                } catch (Exception e) {
+                    session.setAttribute("flashError", "Lỗi cập nhật bài tập: " + e.getMessage());
+                }
             }
         } 
         // =====================================================================

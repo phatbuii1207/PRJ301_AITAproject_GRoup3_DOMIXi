@@ -92,6 +92,21 @@ public class AssignmentDAO extends DBContext {
         return false;
     }
 
+    // 4b. UPDATE TOÀN DIỆN: Cập nhật tiêu đề, mô tả và hạn nộp (Deadline) của bài tập
+    public boolean updateAssignmentFull(Assignment a) {
+        String sql = "UPDATE ASSIGNMENTS SET title = ?, description = ?, deadline = ? WHERE assignment_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, a.getTitle());
+            ps.setString(2, a.getDescription());
+            ps.setTimestamp(3, a.getDeadline());
+            ps.setInt(4, a.getAssignmentId());
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("Notice (AssignmentDAO): updateAssignmentFull fallback: " + e.getMessage());
+            return updateAssignment(a);
+        }
+    }
+
     // 5. DELETE: Xóa bài tập theo ID
     public boolean deleteAssignment(int id) {
         String sql = "DELETE FROM ASSIGNMENTS WHERE assignment_id = ?";

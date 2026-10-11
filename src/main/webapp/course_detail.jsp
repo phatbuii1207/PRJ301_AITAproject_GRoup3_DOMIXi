@@ -622,6 +622,16 @@
                                                 Bài nộp (${empty courseSubmissionsMap[a.assignmentId] ? 0 : courseSubmissionsMap[a.assignmentId].size()})
                                             </button>
 
+                                            <button type="button" class="btn btn-primary btn-edit-assignment"
+                                                    data-id="${a.assignmentId}"
+                                                    data-title="${a.title}"
+                                                    data-description="${a.description}"
+                                                    data-deadline="${a.deadline}"
+                                                    style="margin-right: 6px; background-color: #2563eb;">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                                Sửa
+                                            </button>
+
                                             <form action="course" method="POST" style="display:inline;" onsubmit="return confirm('Xác nhận xóa bài tập này?')">
                                                 <input type="hidden" name="action" value="delete_assignment" />
                                                 <input type="hidden" name="assignmentId" value="${a.assignmentId}" />
@@ -872,7 +882,100 @@
                 closeLecturerSubmissionsModal();
             }
         }
+
+        // =====================================================================
+        // SCRIPT CHỈNH SỬA BÀI TẬP DÀNH CHO GIẢNG VIÊN (EDIT ASSIGNMENT)
+        // =====================================================================
+        function openEditAssignmentModal(assignmentId, title, desc, deadline) {
+            document.getElementById('editAssignmentId').value = assignmentId;
+            document.getElementById('editTitleInput').value = title || '';
+            document.getElementById('editDescriptionInput').value = desc || '';
+            
+            if (deadline) {
+                var dtStr = String(deadline).trim().replace(' ', 'T');
+                if (dtStr.length >= 16) {
+                    document.getElementById('editDeadlineInput').value = dtStr.substring(0, 16);
+                } else {
+                    document.getElementById('editDeadlineInput').value = '';
+                }
+            } else {
+                document.getElementById('editDeadlineInput').value = '';
+            }
+            
+            document.getElementById('editAssignmentModal').style.display = 'flex';
+        }
+
+        function closeEditAssignmentModal() {
+            document.getElementById('editAssignmentModal').style.display = 'none';
+        }
+
+        function closeEditModalOnBackdrop(e) {
+            if (e.target.id === 'editAssignmentModal') {
+                closeEditAssignmentModal();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.btn-edit-assignment').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    openEditAssignmentModal(
+                        this.dataset.id,
+                        this.dataset.title,
+                        this.dataset.description,
+                        this.dataset.deadline
+                    );
+                });
+            });
+        });
     </script>
+
+    <!-- ============================================================= -->
+    <!-- MODAL CHỈNH SỬA BÀI TẬP (CHO GIẢNG VIÊN)                     -->
+    <!-- ============================================================= -->
+    <div id="editAssignmentModal" class="modal-backdrop" style="display: none;" onclick="closeEditModalOnBackdrop(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h3 id="editModalTitle" style="margin:0; font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22" style="color: #2563eb;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Chỉnh Sửa Bài Tập
+                    </h3>
+                    <p id="editModalSubTitle" style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Cập nhật thông tin bài tập hoặc gia hạn thời hạn nộp bài</p>
+                </div>
+                <button type="button" class="btn-close" onclick="closeEditAssignmentModal()">&times;</button>
+            </div>
+            
+            <form action="course" method="POST">
+                <input type="hidden" name="action" value="edit_assignment" />
+                <input type="hidden" name="courseId" value="${courseId}" />
+                <input type="hidden" name="assignmentId" id="editAssignmentId" value="" />
+                
+                <div style="margin-bottom: 14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#334155;">Tiêu đề bài tập:</label>
+                    <input type="text" name="title" id="editTitleInput" required style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;" />
+                </div>
+                
+                <div style="margin-bottom: 14px;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#334155;">Mô tả & Yêu cầu:</label>
+                    <textarea name="description" id="editDescriptionInput" rows="4" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box; font-family:inherit;"></textarea>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#334155;">Hạn nộp bài (Deadline):</label>
+                    <input type="datetime-local" name="deadline" id="editDeadlineInput" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;" />
+                    <div style="font-size:12px; color:#64748b; margin-top:4px;">Gia hạn sau thời điểm hiện tại sẽ tự động mở lại quyền nộp bài cho sinh viên.</div>
+                </div>
+                
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditAssignmentModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary" style="background:#2563eb;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Lưu Thay Đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- ============================================================= -->
     <!-- MODAL DANH SÁCH BÀI NỘP CỦA SINH VIÊN (CHO GIẢNG VIÊN)       -->
