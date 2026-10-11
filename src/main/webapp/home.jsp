@@ -387,9 +387,6 @@
         <a href="home" class="nav-icon active" title="Trang chủ (My Courses)">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
         </a>
-        <a href="assignments" class="nav-icon" title="Quản lý Bài tập (${sessionScope.currentUser.role})">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        </a>
         <a href="javascript:void(0)" onclick="alert('Lịch học kỳ FALL 2026 đang diễn ra theo kế hoạch đào tạo!')" class="nav-icon" title="Thời khóa biểu / Lịch học">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
         </a>
@@ -404,7 +401,6 @@
         <!-- Top Tabs -->
         <div class="top-nav">
             <a href="home" class="tab-btn active">Courses</a>
-            <a href="assignments" class="tab-btn">Assignments (${sessionScope.currentUser.role})</a>
             <a href="javascript:void(0)" onclick="alert('Module Projects liên kết Static Code Analysis AST đang hoàn thiện!')" class="tab-btn">Projects</a>
             <a href="javascript:void(0)" onclick="alert('Tài liệu học tập và tiêu chuẩn Rubric RBL sẵn sàng tại thư mục docs!')" class="tab-btn">Reference</a>
             
