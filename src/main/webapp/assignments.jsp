@@ -105,7 +105,7 @@
         <div class="container">
             <div class="header">
                 <div>
-                    <h2>📚 Quản Lý Đề Bài / Bài Tập (CRUD Giảng Viên)</h2>
+                    <h2>📚 Quản Lý Đề Bài / Bài Tập</h2>
                     <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
                         Giảng viên: <b style="color: #fff;">${sessionScope.currentUser.fullName}</b> 
                         <span style="background: #0284c7; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 6px;">Lecturer</span>
@@ -121,7 +121,7 @@
             <c:if test="${not empty error}">
                 <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; display: flex; align-items: center; gap: 10px;">
                     <span style="font-size: 18px;">⚠️</span>
-                    <div><b>Lỗi nghiệp vụ (Exception Path):</b> ${error}</div>
+                    <div><b></b> ${error}</div>
                 </div>
             </c:if>
             <c:if test="${not empty sessionScope.flashSuccess}">

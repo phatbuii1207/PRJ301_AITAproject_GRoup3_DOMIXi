@@ -7,65 +7,101 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object cho Quản lý Môn học (Courses)
- * Dành cho Thành viên 2 (PRJ301)
+ * Data Access Object cho Quản lý Môn học / Lớp học (Courses / Classes)
+ * Kết nối trực tiếp với bảng CLASSES trong CSDL AST_CodeAnalysisDB.
+ * Quy ước: class_name là mã môn học (PRJ301, CSD201, LAB211, PRF192, WED201).
+ *          class_code là mã định danh lớp (SE1801, SE1802, ...).
  */
 public class CourseDAO extends DBContext {
 
+    private String getSubjectFullName(String subjectCode) {
+        if (subjectCode == null) return "Học phần chuyên ngành";
+        switch (subjectCode.trim().toUpperCase()) {
+            case "PRJ301":
+                return "Java Web Application Development";
+            case "CSD201":
+                return "Data Structures and Algorithms";
+            case "LAB211":
+                return "OOP with Java Lab";
+            case "PRF192":
+                return "Programming Fundamentals with C";
+            case "WED201":
+                return "Web Design & Development";
+            default:
+                return "Học phần " + subjectCode;
+        }
+    }
+
+    private String getBadgeBySubject(String subjectCode) {
+        if (subjectCode == null) return "TECH";
+        switch (subjectCode.trim().toUpperCase()) {
+            case "PRJ301":
+                return "CORE";
+            case "CSD201":
+                return "ALGO";
+            case "LAB211":
+                return "PRACTICE";
+            case "PRF192":
+                return "BASIC";
+            case "WED201":
+                return "FRONTEND";
+            default:
+                return "TECH";
+        }
+    }
+
     /**
-     * 1. READ: Lấy danh sách tất cả môn học trên EduNext Portal
-     * Có cơ chế fallback tự động nạp 4 môn chuẩn nếu CSDL chưa tạo bảng COURSES.
+     * Helper mapping từ ResultSet của bảng CLASSES sang Model Course
+     */
+    private Course mapResultSetToCourse(ResultSet rs) throws Exception {
+        int classId = rs.getInt("class_id");
+        String classCode = rs.getString("class_code");
+        String className = rs.getString("class_name"); // Tên lớp chính là mã môn
+
+        String subjectFullName = getSubjectFullName(className);
+        String description = "Lớp " + classCode + " - " + subjectFullName;
+        String badge = getBadgeBySubject(className);
+        int totalSlots = 15; // Mỗi lớp chuẩn 15 sinh viên
+
+        return new Course(classId, className, subjectFullName + " (" + classCode + ")", description, badge, totalSlots);
+    }
+
+    /**
+     * 1. READ: Lấy danh sách tất cả các lớp/môn học từ bảng CLASSES
      */
     public List<Course> getAllCourses() {
         List<Course> list = new ArrayList<>();
-        String sql = "SELECT course_id, course_code, course_name, description, badge, total_slots "
-                   + "FROM COURSES ORDER BY course_id ASC";
+        String sql = "SELECT class_id, class_code, class_name FROM CLASSES ORDER BY class_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                list.add(new Course(
-                        rs.getInt("course_id"),
-                        rs.getString("course_code"),
-                        rs.getString("course_name"),
-                        rs.getString("description"),
-                        rs.getString("badge"),
-                        rs.getInt("total_slots")
-                ));
+                list.add(mapResultSetToCourse(rs));
             }
             if (!list.isEmpty()) {
                 return list;
             }
         } catch (Exception e) {
-            System.err.println("Notice (TV2): Bảng COURSES chưa sẵn sàng trong CSDL (" + e.getMessage() + "), kích hoạt Fallback 4 môn chuẩn.");
+            System.err.println("Notice (CourseDAO): Truy vấn bảng CLASSES (" + e.getMessage() + "), kích hoạt fallback 5 lớp chuẩn.");
         }
         return getDefaultCourses();
     }
 
     /**
-     * 2. READ: Tìm một môn học theo ID (dùng cho trang chi tiết /course?id=...)
+     * 2. READ: Tìm một môn học / lớp học theo ID (dùng cho trang chi tiết /course?id=...)
      */
     public Course getCourseById(int id) {
-        String sql = "SELECT course_id, course_code, course_name, description, badge, total_slots "
-                   + "FROM COURSES WHERE course_id = ?";
+        String sql = "SELECT class_id, class_code, class_name FROM CLASSES WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return new Course(
-                        rs.getInt("course_id"),
-                        rs.getString("course_code"),
-                        rs.getString("course_name"),
-                        rs.getString("description"),
-                        rs.getString("badge"),
-                        rs.getInt("total_slots")
-                );
+                return mapResultSetToCourse(rs);
             }
         } catch (Exception e) {
-            System.err.println("Notice (TV2): getCourseById fallback do CSDL: " + e.getMessage());
+            System.err.println("Notice (CourseDAO): getCourseById fallback: " + e.getMessage());
         }
-        // Fallback tìm trong danh sách mặc định
         for (Course c : getDefaultCourses()) {
             if (c.getCourseId() == id) {
                 return c;
@@ -75,17 +111,17 @@ public class CourseDAO extends DBContext {
     }
 
     /**
-     * 3. SEARCH: Tìm kiếm môn học theo mã môn hoặc tên môn
+     * 3. SEARCH: Tìm kiếm môn học theo mã môn (class_name) hoặc mã lớp (class_code)
      */
     public List<Course> searchCourses(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return getAllCourses();
         }
         List<Course> list = new ArrayList<>();
-        String sql = "SELECT course_id, course_code, course_name, description, badge, total_slots "
-                   + "FROM COURSES "
-                   + "WHERE course_code LIKE ? OR course_name LIKE ? "
-                   + "ORDER BY course_id ASC";
+        String sql = "SELECT class_id, class_code, class_name "
+                   + "FROM CLASSES "
+                   + "WHERE class_name LIKE ? OR class_code LIKE ? "
+                   + "ORDER BY class_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             String term = "%" + keyword.trim() + "%";
@@ -93,27 +129,20 @@ public class CourseDAO extends DBContext {
             ps.setString(2, term);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                list.add(new Course(
-                        rs.getInt("course_id"),
-                        rs.getString("course_code"),
-                        rs.getString("course_name"),
-                        rs.getString("description"),
-                        rs.getString("badge"),
-                        rs.getInt("total_slots")
-                ));
+                list.add(mapResultSetToCourse(rs));
             }
             if (!list.isEmpty()) {
                 return list;
             }
         } catch (Exception e) {
-            System.err.println("Notice (TV2): searchCourses fallback: " + e.getMessage());
+            System.err.println("Notice (CourseDAO): searchCourses fallback: " + e.getMessage());
         }
 
-        // Fallback tìm kiếm trong danh sách mặc định
         String lowerKeyword = keyword.trim().toLowerCase();
         for (Course c : getDefaultCourses()) {
             if (c.getCourseCode().toLowerCase().contains(lowerKeyword)
-                    || c.getCourseName().toLowerCase().contains(lowerKeyword)) {
+                    || c.getCourseName().toLowerCase().contains(lowerKeyword)
+                    || c.getDescription().toLowerCase().contains(lowerKeyword)) {
                 list.add(c);
             }
         }
@@ -121,115 +150,83 @@ public class CourseDAO extends DBContext {
     }
 
     /**
-     * 4. CREATE: Thêm môn học mới
+     * 4. CREATE: Thêm lớp môn học mới vào bảng CLASSES
      */
     public boolean insertCourse(Course c) {
-        String sql = "INSERT INTO COURSES (course_code, course_name, description, badge, total_slots) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO CLASSES (class_code, class_name) VALUES (?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setString(1, c.getCourseCode());
-            ps.setString(2, c.getCourseName());
-            ps.setString(3, c.getDescription());
-            ps.setString(4, c.getBadge());
-            ps.setInt(5, c.getTotalSlots());
+            // class_code: mã lớp (nếu chưa có thì tạo mặc định), class_name: mã môn học
+            ps.setString(1, "SE" + (1800 + c.getCourseId()));
+            ps.setString(2, c.getCourseCode());
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
-            System.err.println("Notice (TV2): insertCourse: " + e.getMessage());
+            System.err.println("Notice (CourseDAO): insertCourse: " + e.getMessage());
             return false;
         }
     }
 
     /**
-     * 5. UPDATE: Cập nhật thông tin môn học
+     * 5. UPDATE: Cập nhật thông tin mã môn trong bảng CLASSES
      */
     public boolean updateCourse(Course c) {
-        String sql = "UPDATE COURSES SET course_code = ?, course_name = ?, description = ?, badge = ?, total_slots = ? WHERE course_id = ?";
+        String sql = "UPDATE CLASSES SET class_name = ? WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, c.getCourseCode());
-            ps.setString(2, c.getCourseName());
-            ps.setString(3, c.getDescription());
-            ps.setString(4, c.getBadge());
-            ps.setInt(5, c.getTotalSlots());
-            ps.setInt(6, c.getCourseId());
+            ps.setInt(2, c.getCourseId());
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
-            System.err.println("Notice (TV2): updateCourse: " + e.getMessage());
+            System.err.println("Notice (CourseDAO): updateCourse: " + e.getMessage());
             return false;
         }
     }
 
     /**
-     * 6. DELETE: Xóa môn học theo ID
+     * 6. DELETE: Xóa lớp học theo class_id
      */
     public boolean deleteCourse(int id) {
-        String sql = "DELETE FROM COURSES WHERE course_id = ?";
+        String sql = "DELETE FROM CLASSES WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
-            System.err.println("Notice (TV2): deleteCourse: " + e.getMessage());
+            System.err.println("Notice (CourseDAO): deleteCourse: " + e.getMessage());
             return false;
         }
     }
 
     /**
-     * Dữ liệu mặc định 4 môn học chuẩn EduNext Portal
-     * Đảm bảo hệ thống hoạt động ổn định khi TV5 chưa chạy migration SQL.
+     * Dữ liệu mặc định 5 lớp học tương ứng 5 mã môn chuẩn trong CSDL
      */
     public List<Course> getDefaultCourses() {
         List<Course> list = new ArrayList<>();
-        list.add(new Course(1, "PRJ301", "Java Web Application Development",
-                "Học phần Servlet, JSP, JDBC, MVC Model và Static Code Analysis AST.", "CORE", 30));
-        list.add(new Course(2, "CSD201", "Data Structures and Algorithms",
-                "Cấu trúc dữ liệu nâng cao, Binary Trees, Graph Traversal, Sorting.", "TECH", 30));
-        list.add(new Course(3, "PRO192", "Object-Oriented Programming with Java",
-                "Lập trình hướng đối tượng với Java: OOP principles, Polymorphism, Collections.", "BASIC", 30));
-        list.add(new Course(4, "DBI202", "Introduction to Databases",
-                "Cơ sở dữ liệu quan hệ, SQL Server, Chuẩn hóa 3NF và RDBMS.", "DATABASE", 30));
+        list.add(new Course(1, "PRJ301", "Java Web Application Development (SE1801)",
+                "Lớp SE1801 - Học phần PRJ301: Servlet, JSP, JDBC, AST Analyzer.", "CORE", 15));
+        list.add(new Course(2, "CSD201", "Data Structures and Algorithms (SE1802)",
+                "Lớp SE1802 - Học phần CSD201: Cấu trúc dữ liệu và giải thuật.", "ALGO", 15));
+        list.add(new Course(3, "LAB211", "OOP with Java Lab (SE1803)",
+                "Lớp SE1803 - Học phần LAB211: Thực hành lập trình hướng đối tượng.", "PRACTICE", 15));
+        list.add(new Course(4, "PRF192", "Programming Fundamentals with C (SE1804)",
+                "Lớp SE1804 - Học phần PRF192: Nhập môn lập trình.", "BASIC", 15));
+        list.add(new Course(5, "WED201", "Web Design & Development (SE1805)",
+                "Lớp SE1805 - Học phần WED201: Thiết kế giao diện Web hiện đại.", "FRONTEND", 15));
         return list;
     }
 
     /**
      * Hàm test độc lập từng hàm trong CourseDAO (Unit Test)
-     * Nhấn Shift + F6 trong NetBeans để chạy riêng file này kiểm tra kết quả!
      */
     public static void main(String[] args) {
-        System.out.println("========== BẮT ĐẦU TEST TỪNG HÀM TRONG CourseDAO ==========\n");
+        System.out.println("========== BẮT ĐẦU TEST CourseDAO VỚI BẢNG CLASSES ==========\n");
         CourseDAO dao = new CourseDAO();
 
-        // 1. Test getAllCourses
-        System.out.println("--- 1. Test getAllCourses() ---");
         List<Course> all = dao.getAllCourses();
-        System.out.println("Số lượng môn học lấy được: " + all.size());
+        System.out.println("Số lượng môn/lớp lấy được: " + all.size());
         for (Course c : all) {
-            System.out.println(" + [" + c.getCourseCode() + "] " + c.getCourseName() + " (" + c.getBadge() + ") - " + c.getTotalSlots() + " slots");
+            System.out.println(" + [Mã môn: " + c.getCourseCode() + "] " + c.getCourseName() + " (" + c.getBadge() + ") - " + c.getTotalSlots() + " SV");
         }
-
-        // 2. Test getCourseById
-        System.out.println("\n--- 2. Test getCourseById(1) ---");
-        Course c1 = dao.getCourseById(1);
-        if (c1 != null) {
-            System.out.println("Tìm thấy môn ID=1: " + c1.getCourseCode() + " - " + c1.getCourseName());
-            System.out.println("Mô tả: " + c1.getDescription());
-        } else {
-            System.err.println("Không tìm thấy môn ID=1!");
-        }
-
-        // 3. Test searchCourses
-        System.out.println("\n--- 3. Test searchCourses('PRJ') ---");
-        List<Course> searchPrj = dao.searchCourses("PRJ");
-        for (Course c : searchPrj) {
-            System.out.println(" + Kết quả khớp: " + c.getCourseCode() + " - " + c.getCourseName());
-        }
-
-        System.out.println("\n--- 4. Test searchCourses('Database') ---");
-        List<Course> searchDb = dao.searchCourses("Database");
-        for (Course c : searchDb) {
-            System.out.println(" + Kết quả khớp: " + c.getCourseCode() + " - " + c.getCourseName());
-        }
-
-        System.out.println("\n========== TẤT CẢ CÁC HÀM CỦA CourseDAO HOẠT ĐỘNG HOÀN HẢO! ==========");
     }
 }
+

@@ -12,7 +12,7 @@ public class DBContext {
             // Thay đổi user và password theo tài khoản SQL Server của bạn
             
             String user = "sa";
-            String pass = "123456";
+            String pass = "sa123";
 
             String host = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
             String url = "jdbc:sqlserver://" + host + ":1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";

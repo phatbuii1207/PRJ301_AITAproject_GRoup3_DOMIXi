@@ -5,7 +5,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * Tiện ích hỗ trợ mã hóa mật khẩu bằng thuật toán SHA-256
+ * Tiện ích hỗ trợ mã hóa mật khẩu.
+ * LƯU Ý: Dữ liệu seed trong CSDL (AITA_Database.sql) dùng MD5 để băm mật khẩu.
+ * Phương thức sha256Hex() được giữ nguyên tên nhưng thực hiện băm MD5 để tương thích.
  */
 public class PasswordUtil {
 
@@ -14,25 +16,27 @@ public class PasswordUtil {
     }
 
     /**
-     * Băm chuỗi mật khẩu thô sang chuỗi hex 64 ký tự thường bằng SHA-256
+     * Băm chuỗi mật khẩu thô sang chuỗi hex MD5 (32 ký tự thường)
+     * để khớp với hash đã được lưu trong CSDL seed data.
      *
      * @param raw Mật khẩu dạng chuỗi thô
-     * @return Chuỗi mã băm SHA-256 hex thường (64 ký tự)
+     * @return Chuỗi mã băm MD5 hex thường (32 ký tự)
      */
     public static String sha256Hex(String raw) {
         if (raw == null) {
             return null;
         }
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] digest = md.digest(raw.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(64);
+            StringBuilder sb = new StringBuilder(32);
             for (byte b : digest) {
                 sb.append(String.format("%02x", b));
             }
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Không tìm thấy thuật toán SHA-256 trên hệ thống", e);
+            throw new IllegalStateException("Không tìm thấy thuật toán MD5 trên hệ thống", e);
         }
     }
 }
+

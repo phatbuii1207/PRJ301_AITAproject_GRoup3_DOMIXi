@@ -48,18 +48,18 @@ public class AssignmentServlet extends HttpServlet {
                     Assignment a = dao.getAssignmentById(id);
 
                     if (a == null) {
-                        request.setAttribute("error", "Không tìm thấy bài tập #" + id + " (có thể đã bị xóa)!");
+                        request.setAttribute("error", "Không tìm thấy bài tập(có thể đã bị xóa)!");
                     } else if (a.getLecturerId() == currentUser.getUserId()) {
                         boolean ok = dao.deleteAssignment(id);
                         if (ok) {
-                            session.setAttribute("flashSuccess", "Đã xóa thành công bài tập #" + id + "!");
+                            session.setAttribute("flashSuccess", "Đã xóa thành công bài tập!");
                         } else {
-                            request.setAttribute("error", "Không thể xóa bài tập #" + id + " do lỗi ràng buộc dữ liệu!");
+                            request.setAttribute("error", "Không thể xóa bài tập!");
                         }
                         response.sendRedirect("assignments");
                         return;
                     } else {
-                        request.setAttribute("error", "Bạn không có quyền xóa bài tập #" + id + " của giảng viên khác!");
+                        request.setAttribute("error", "Bạn không có quyền xóa bài tập của giảng viên khác!");
                     }
                 }
             } catch (NumberFormatException e) {
@@ -77,11 +77,11 @@ public class AssignmentServlet extends HttpServlet {
                     Assignment a = dao.getAssignmentById(id);
 
                     if (a == null) {
-                        request.setAttribute("error", "Không tìm thấy bài tập #" + id + " để chỉnh sửa!");
+                        request.setAttribute("error", "Không tìm thấy bài tập để chỉnh sửa!");
                     } else if (a.getLecturerId() == currentUser.getUserId()) {
                         request.setAttribute("editAssignment", a);
                     } else {
-                        request.setAttribute("error", "Bạn không có quyền sửa bài tập #" + id + " của giảng viên khác!");
+                        request.setAttribute("error", "Bạn không có quyền sửa bài tập của giảng viên khác!");
                     }
                 }
             } catch (NumberFormatException e) {
@@ -150,7 +150,7 @@ public class AssignmentServlet extends HttpServlet {
                 int id = Integer.parseInt(request.getParameter("id"));
                 Assignment existing = dao.getAssignmentById(id);
                 if (existing == null) {
-                    request.setAttribute("error", "Bài tập #" + id + " không còn tồn tại!");
+                    request.setAttribute("error", "Bài tập không còn tồn tại!");
                     List<Assignment> list = dao.getAllAssignments();
                     request.setAttribute("assignmentList", list);
                     request.getRequestDispatcher("assignments.jsp").forward(request, response);
@@ -167,7 +167,7 @@ public class AssignmentServlet extends HttpServlet {
                 Assignment a = new Assignment(id, currentUser.getUserId(), null, title.trim(), description != null ? description.trim() : "", null);
                 boolean ok = dao.updateAssignment(a);
                 if (ok) {
-                    session.setAttribute("flashSuccess", "Cập nhật bài tập #" + id + " thành công!");
+                    session.setAttribute("flashSuccess", "Cập nhật bài tập thành công!");
                 } else {
                     request.setAttribute("error", "Lỗi CSDL khi cập nhật bài tập!");
                 }
