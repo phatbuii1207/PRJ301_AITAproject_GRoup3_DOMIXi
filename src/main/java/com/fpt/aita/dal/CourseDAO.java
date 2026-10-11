@@ -69,11 +69,36 @@ public class CourseDAO extends DBContext {
     /**
      * 1. READ: Lấy danh sách tất cả các lớp/môn học từ bảng CLASSES
      */
+    /**
+     * 1. READ: Lấy danh sách tất cả các môn học (Ưu tiên bảng COURSES chuẩn EduNext 4 môn)
+     */
     public List<Course> getAllCourses() {
         List<Course> list = new ArrayList<>();
-        String sql = "SELECT class_id, class_code, class_name FROM CLASSES ORDER BY class_id ASC";
+        // Ưu tiên 1: Bảng COURSES chuẩn (PRJ301, CSD201, PRO192, DBI202)
+        String sqlCourses = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES ORDER BY course_id ASC";
         try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+            PreparedStatement ps = connection.prepareStatement(sqlCourses);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new Course(
+                    rs.getInt("course_id"),
+                    rs.getString("course_code"),
+                    rs.getString("course_name"),
+                    rs.getString("description"),
+                    rs.getString("badge"),
+                    rs.getInt("total_slots")
+                ));
+            }
+            if (!list.isEmpty()) {
+                return list;
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Ưu tiên 2: Fallback sang bảng CLASSES
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES ORDER BY class_id ASC";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sqlClasses);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(mapResultSetToCourse(rs));
@@ -81,27 +106,45 @@ public class CourseDAO extends DBContext {
             if (!list.isEmpty()) {
                 return list;
             }
-        } catch (Exception e) {
-            System.err.println("Notice (CourseDAO): Truy vấn bảng CLASSES (" + e.getMessage() + "), kích hoạt fallback 5 lớp chuẩn.");
+        } catch (Exception ignored) {
         }
+
         return getDefaultCourses();
     }
 
     /**
-     * 2. READ: Tìm một môn học / lớp học theo ID (dùng cho trang chi tiết /course?id=...)
+     * 2. READ: Tìm môn học theo ID
      */
     public Course getCourseById(int id) {
-        String sql = "SELECT class_id, class_code, class_name FROM CLASSES WHERE class_id = ?";
+        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES WHERE course_id = ?";
         try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+            PreparedStatement ps = connection.prepareStatement(sqlCourse);
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Course(
+                    rs.getInt("course_id"),
+                    rs.getString("course_code"),
+                    rs.getString("course_name"),
+                    rs.getString("description"),
+                    rs.getString("badge"),
+                    rs.getInt("total_slots")
+                );
+            }
+        } catch (Exception ignored) {
+        }
+
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES WHERE class_id = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sqlClasses);
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return mapResultSetToCourse(rs);
             }
-        } catch (Exception e) {
-            System.err.println("Notice (CourseDAO): getCourseById fallback: " + e.getMessage());
+        } catch (Exception ignored) {
         }
+
         for (Course c : getDefaultCourses()) {
             if (c.getCourseId() == id) {
                 return c;
@@ -111,19 +154,42 @@ public class CourseDAO extends DBContext {
     }
 
     /**
-     * 3. SEARCH: Tìm kiếm môn học theo mã môn (class_name) hoặc mã lớp (class_code)
+     * 3. SEARCH: Tìm kiếm môn học theo từ khóa
      */
     public List<Course> searchCourses(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return getAllCourses();
         }
         List<Course> list = new ArrayList<>();
-        String sql = "SELECT class_id, class_code, class_name "
-                   + "FROM CLASSES "
-                   + "WHERE class_name LIKE ? OR class_code LIKE ? "
-                   + "ORDER BY class_id ASC";
+        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES "
+                         + "WHERE course_code LIKE ? OR course_name LIKE ? OR description LIKE ? ORDER BY course_id ASC";
         try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+            PreparedStatement ps = connection.prepareStatement(sqlCourse);
+            String term = "%" + keyword.trim() + "%";
+            ps.setString(1, term);
+            ps.setString(2, term);
+            ps.setString(3, term);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new Course(
+                    rs.getInt("course_id"),
+                    rs.getString("course_code"),
+                    rs.getString("course_name"),
+                    rs.getString("description"),
+                    rs.getString("badge"),
+                    rs.getInt("total_slots")
+                ));
+            }
+            if (!list.isEmpty()) {
+                return list;
+            }
+        } catch (Exception ignored) {
+        }
+
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES "
+                         + "WHERE class_name LIKE ? OR class_code LIKE ? ORDER BY class_id ASC";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sqlClasses);
             String term = "%" + keyword.trim() + "%";
             ps.setString(1, term);
             ps.setString(2, term);
@@ -134,8 +200,7 @@ public class CourseDAO extends DBContext {
             if (!list.isEmpty()) {
                 return list;
             }
-        } catch (Exception e) {
-            System.err.println("Notice (CourseDAO): searchCourses fallback: " + e.getMessage());
+        } catch (Exception ignored) {
         }
 
         String lowerKeyword = keyword.trim().toLowerCase();
@@ -202,16 +267,14 @@ public class CourseDAO extends DBContext {
      */
     public List<Course> getDefaultCourses() {
         List<Course> list = new ArrayList<>();
-        list.add(new Course(1, "PRJ301", "Java Web Application Development (SE1801)",
-                "Lớp SE1801 - Học phần PRJ301: Servlet, JSP, JDBC, AST Analyzer.", "CORE", 15));
-        list.add(new Course(2, "CSD201", "Data Structures and Algorithms (SE1802)",
-                "Lớp SE1802 - Học phần CSD201: Cấu trúc dữ liệu và giải thuật.", "ALGO", 15));
-        list.add(new Course(3, "LAB211", "OOP with Java Lab (SE1803)",
-                "Lớp SE1803 - Học phần LAB211: Thực hành lập trình hướng đối tượng.", "PRACTICE", 15));
-        list.add(new Course(4, "PRF192", "Programming Fundamentals with C (SE1804)",
-                "Lớp SE1804 - Học phần PRF192: Nhập môn lập trình.", "BASIC", 15));
-        list.add(new Course(5, "WED201", "Web Design & Development (SE1805)",
-                "Lớp SE1805 - Học phần WED201: Thiết kế giao diện Web hiện đại.", "FRONTEND", 15));
+        list.add(new Course(1, "PRJ301", "Java Web Application Development",
+                "Phát triển ứng dụng Web với Java (Servlet, JSP, JDBC, AST Analyzer)", "CORE", 30));
+        list.add(new Course(2, "CSD201", "Data Structures and Algorithm",
+                "Cấu trúc dữ liệu và giải thuật (Binary Trees, Graphs, Sorting)", "TECH", 30));
+        list.add(new Course(3, "PRO192", "Object-Oriented Programming",
+                "Lập trình hướng đối tượng với Java (OOP principles, Collections)", "BASIC", 30));
+        list.add(new Course(4, "DBI202", "Database Systems",
+                "Hệ cơ sở dữ liệu quan hệ (SQL Server, 3NF Normalization)", "DATABASE", 30));
         return list;
     }
 

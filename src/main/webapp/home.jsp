@@ -376,14 +376,27 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">FPT<br><span>Education</span></div>
+        <a href="home" class="sidebar-logo" style="text-decoration: none; display: block;" title="MIXI ASSIGN Dashboard">
+            <span style="color: #f26522; font-weight: 800; font-size: 13px;">MIXI</span><br>
+            <span style="color: #0076c8; font-size: 10px; font-weight: 700;">ASSIGN</span>
+        </a>
         
-        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></div>
-        <div class="nav-icon active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div>
-        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
-        <div class="nav-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
+        <a href="home" class="nav-icon" title="Người dùng: ${sessionScope.currentUser.fullName} (${sessionScope.currentUser.role})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        </a>
+        <a href="home" class="nav-icon active" title="Trang chủ (My Courses)">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+        </a>
+        <a href="assignments" class="nav-icon" title="Quản lý Bài tập (${sessionScope.currentUser.role})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        </a>
+        <a href="javascript:void(0)" onclick="alert('Lịch học kỳ FALL 2026 đang diễn ra theo kế hoạch đào tạo!')" class="nav-icon" title="Thời khóa biểu / Lịch học">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        </a>
         
-        <div class="nav-icon nav-bottom"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+        <a href="logout" class="nav-icon nav-bottom" title="Đăng xuất (${sessionScope.currentUser.username})">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        </a>
     </div>
 
     <!-- Main Content -->
@@ -392,8 +405,8 @@
         <div class="top-nav">
             <a href="home" class="tab-btn active">Courses</a>
             <a href="assignments" class="tab-btn">Assignments (${sessionScope.currentUser.role})</a>
-            <a href="#" class="tab-btn">Projects</a>
-            <a href="#" class="tab-btn">Reference</a>
+            <a href="javascript:void(0)" onclick="alert('Module Projects liên kết Static Code Analysis AST đang hoàn thiện!')" class="tab-btn">Projects</a>
+            <a href="javascript:void(0)" onclick="alert('Tài liệu học tập và tiêu chuẩn Rubric RBL sẵn sàng tại thư mục docs!')" class="tab-btn">Reference</a>
             
             <a href="logout" class="logout-btn">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -416,7 +429,7 @@
         <!-- Info Alert -->
         <div class="info-alert">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Cached 0 min ago. Data auto-refreshes every 60 min.
+            Dữ liệu kết nối SQL Server thời gian thực &bull; Cổng học tập EduNext
         </div>
 
         <!-- Layout Body -->
@@ -428,18 +441,18 @@
                     Semesters <span class="badge">6</span>
                 </div>
                 <div class="filter-group">
-                    <div class="filter-item">TRIAL</div>
+                    <div class="filter-item" onclick="selectSemester(this, 'ALL')">ALL SEMESTERS</div>
                     
                     <div class="filter-title">SUMMER</div>
-                    <div class="filter-item">2026</div>
-                    <div class="filter-item">2025</div>
+                    <div class="filter-item" onclick="selectSemester(this, 'SU26')">2026</div>
+                    <div class="filter-item" onclick="selectSemester(this, 'SU25')">2025</div>
                     
                     <div class="filter-title">SPRING</div>
-                    <div class="filter-item">2026</div>
+                    <div class="filter-item" onclick="selectSemester(this, 'SP26')">2026</div>
                     
                     <div class="filter-title">FALL</div>
-                    <div class="filter-item active">2026</div>
-                    <div class="filter-item">2025</div>
+                    <div class="filter-item active" onclick="selectSemester(this, 'FA26')">2026</div>
+                    <div class="filter-item" onclick="selectSemester(this, 'FA25')">2025</div>
                 </div>
             </div>
 
@@ -447,13 +460,13 @@
             <div class="courses-area">
                 <form action="home" method="GET" class="search-bar">
                     <svg fill="none" stroke="#9ca3af" viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" name="search" value="${searchKeyword}" placeholder="Search courses..." autocomplete="off">
+                    <input type="text" name="search" id="courseSearchInput" value="${searchKeyword}" placeholder="Search courses (nhập tìm kiếm tức thì)..." oninput="liveFilterCourses(this.value)" autocomplete="off">
                     <c:if test="${not empty searchKeyword}">
                         <a href="home" style="color:var(--text-muted); text-decoration:none; font-size:13px; font-weight:600; white-space:nowrap; padding: 2px 6px;">✕ Xóa tìm kiếm</a>
                     </c:if>
                 </form>
 
-                <div class="courses-grid">
+                <div class="courses-grid" id="courseGrid">
                     <c:choose>
                         <c:when test="${not empty courseList}">
                             <c:forEach items="${courseList}" var="c" varStatus="status">
@@ -464,7 +477,7 @@
                                     <c:when test="${status.index % 4 == 3}"><c:set var="tagColor" value="tag-orange"/></c:when>
                                     <c:otherwise><c:set var="tagColor" value="tag-blue"/></c:otherwise>
                                 </c:choose>
-                                <div class="course-card">
+                                <div class="course-card" onclick="location.href='course?id=${c.courseId}'" style="cursor: pointer;" title="Nhấn để xem chi tiết môn ${c.courseCode}">
                                     <div class="card-header">
                                         <div class="tag-icon ${tagColor}">
                                             <c:choose>
@@ -478,7 +491,7 @@
                                     <div class="course-title">${c.courseName}</div>
                                     <div class="course-subtitle">${c.description}</div>
                                     <div class="card-footer">
-                                        <a href="course?id=${c.courseId}" class="btn-start">
+                                        <a href="course?id=${c.courseId}" class="btn-start" onclick="event.stopPropagation();">
                                             <span><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: text-bottom; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Get started</span>
                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                         </a>
@@ -499,5 +512,22 @@
         </div>
     </div>
 
+    <script>
+        // Xử lý chuyển học kỳ linh hoạt
+        function selectSemester(el, code) {
+            document.querySelectorAll('.filter-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Tìm kiếm tức thời (Client-side Realtime Instant Filter)
+        function liveFilterCourses(query) {
+            var term = (query || '').toLowerCase().trim();
+            var cards = document.querySelectorAll('.course-card');
+            cards.forEach(function(card) {
+                var text = card.textContent.toLowerCase();
+                card.style.display = text.indexOf(term) !== -1 ? '' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>

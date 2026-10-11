@@ -60,6 +60,16 @@ CREATE TABLE [dbo].[CLASSES](
     [class_name] [nvarchar](100) NOT NULL
 );
 
+-- Bảng Môn học (Cổng học tập EduNext Portal)
+CREATE TABLE [dbo].[COURSES](
+    [course_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    [course_code] [varchar](20) NOT NULL UNIQUE,
+    [course_name] [nvarchar](150) NOT NULL,
+    [description] [nvarchar](500) NULL,
+    [badge] [varchar](20) NOT NULL DEFAULT 'TECH',
+    [total_slots] [int] NOT NULL DEFAULT 30
+);
+
 -- Bảng Người dùng (Giảng viên, Sinh viên, Quản trị viên)
 CREATE TABLE [dbo].[USERS](
     [user_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -82,10 +92,13 @@ CREATE TABLE [dbo].[USER_CLASS](
 CREATE TABLE [dbo].[ASSIGNMENTS](
     [assignment_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [lecturer_id] [int] NOT NULL,
+    [course_id] [int] NULL,
     [title] [nvarchar](150) NOT NULL,
     [description] [nvarchar](500) NULL,
+    [deadline] [datetime] NULL,
     [created_at] [datetime] NOT NULL DEFAULT GETDATE(),
-    FOREIGN KEY ([lecturer_id]) REFERENCES [dbo].[USERS]([user_id])
+    FOREIGN KEY ([lecturer_id]) REFERENCES [dbo].[USERS]([user_id]),
+    FOREIGN KEY ([course_id]) REFERENCES [dbo].[COURSES]([course_id])
 );
 
 -- Bảng Bài nộp của Sinh viên
@@ -294,11 +307,21 @@ INSERT INTO [dbo].[USER_CLASS] ([user_id], [class_id]) VALUES
 -- Lớp 5: SE1805 (WED201) - 15 sinh viên
 (64, 5), (65, 5), (66, 5), (67, 5), (68, 5), (69, 5), (70, 5), (71, 5), (72, 5), (73, 5), (74, 5), (75, 5), (76, 5), (77, 5), (78, 5);
 
--- 2.5. Thêm Đề bài (Assignments)
-INSERT INTO [dbo].[ASSIGNMENTS] ([lecturer_id], [title], [description], [created_at]) VALUES
-(1, N'Assignment 1: Data Structures & Sorting Optimization', N'Cài đặt và tối ưu các thuật toán sắp xếp và tìm kiếm mảng dữ liệu.', '2026-09-01 08:00:00'),
-(2, N'Assignment 2: Java Web MVC & JDBC Best Practices', N'Phát triển ứng dụng quản lý sinh viên với chuẩn MVC2, an toàn kết nối JDBC.', '2026-09-05 09:30:00'),
-(3, N'Assignment 3: AST Static Code Parsing Implementation', N'Viết module bóc tách cây cú pháp trừu tượng phát hiện code smells.', '2026-09-10 14:00:00');
+-- 2.5. Thêm Môn học chuẩn EduNext Portal (Courses)
+INSERT INTO [dbo].[COURSES] ([course_code], [course_name], [description], [badge], [total_slots]) VALUES
+('PRJ301', N'Java Web Application Development', N'Học phần Servlet, JSP, JDBC, MVC Model và Static Code Analysis AST.', 'CORE', 30),
+('CSD201', N'Data Structures and Algorithms', N'Cấu trúc dữ liệu nâng cao, Binary Trees, Graph Traversal, Sorting.', 'TECH', 30),
+('PRO192', N'Object-Oriented Programming with Java', N'Lập trình hướng đối tượng với Java: OOP principles, Polymorphism, Collections.', 'BASIC', 30),
+('DBI202', N'Introduction to Databases', N'Cơ sở dữ liệu quan hệ, SQL Server, Chuẩn hóa 3NF và RDBMS.', 'DATABASE', 30);
+
+-- 2.6. Thêm Đề bài (Assignments)
+INSERT INTO [dbo].[ASSIGNMENTS] ([lecturer_id], [course_id], [title], [description], [deadline], [created_at]) VALUES
+(1, 1, N'Assignment 1: Data Structures & Sorting Optimization', N'Cài đặt và tối ưu các thuật toán sắp xếp và tìm kiếm mảng dữ liệu.', '2026-10-20 23:59:00', '2026-09-01 08:00:00'),
+(2, 1, N'Assignment 2: Java Web MVC & JDBC Best Practices', N'Phát triển ứng dụng quản lý sinh viên với chuẩn MVC2, an toàn kết nối JDBC.', '2026-10-25 23:59:00', '2026-09-05 09:30:00'),
+(3, 1, N'Assignment 3: AST Static Code Parsing Implementation', N'Viết module bóc tách cây cú pháp trừu tượng phát hiện code smells.', '2026-10-30 23:59:00', '2026-09-10 14:00:00'),
+(1, 2, N'CSD201 Lab: Binary Search Tree & AVL Balancing', N'Cài đặt cấu trúc cây nhị phân tìm kiếm BST và cân bằng cây AVL.', '2026-10-22 23:59:00', '2026-09-12 09:00:00'),
+(1, 3, N'PRO192 Lab: Java OOP Polymorphism & Interfaces', N'Hiện thực các nguyên lý hướng đối tượng Đa hình và Kế thừa.', '2026-10-24 23:59:00', '2026-09-14 10:00:00'),
+(1, 4, N'DBI202 Lab: Database Normalization 3NF & SQL', N'Thiết kế lược đồ quan hệ chuẩn 3NF và viết truy vấn Subquery, JOIN.', '2026-10-26 23:59:00', '2026-09-15 14:00:00');
 
 -- 2.6. Thêm Danh mục Luật phân tích tĩnh (Rules)
 INSERT INTO [dbo].[RULES] ([rule_code], [category], [name], [weight], [enabled]) VALUES
