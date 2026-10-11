@@ -215,6 +215,75 @@ public class CourseDAO extends DBContext {
     }
 
     /**
+     * 3b. READ: Lấy danh sách môn học của riêng người dùng (Giảng viên phụ trách hoặc Sinh viên tham gia)
+     */
+    public List<Course> getCoursesByUserId(int userId) {
+        List<Course> list = new ArrayList<>();
+        String sql = "SELECT c.class_id, c.class_code, c.class_name "
+                   + "FROM CLASSES c "
+                   + "JOIN USER_CLASS uc ON c.class_id = uc.class_id "
+                   + "WHERE uc.user_id = ? "
+                   + "ORDER BY c.class_id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToCourse(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Notice (CourseDAO): getCoursesByUserId: " + e.getMessage());
+        }
+
+        // Fallback an toàn nếu người dùng chưa có phân công trong USER_CLASS
+        if (list.isEmpty()) {
+            return getAllCourses();
+        }
+        return list;
+    }
+
+    /**
+     * 3c. SEARCH: Tìm kiếm trong danh sách môn học của người dùng
+     */
+    public List<Course> searchCoursesByUserId(int userId, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getCoursesByUserId(userId);
+        }
+        List<Course> list = new ArrayList<>();
+        String sql = "SELECT c.class_id, c.class_code, c.class_name "
+                   + "FROM CLASSES c "
+                   + "JOIN USER_CLASS uc ON c.class_id = uc.class_id "
+                   + "WHERE uc.user_id = ? AND (c.class_name LIKE ? OR c.class_code LIKE ?) "
+                   + "ORDER BY c.class_id ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            String term = "%" + keyword.trim() + "%";
+            ps.setInt(1, userId);
+            ps.setString(2, term);
+            ps.setString(3, term);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToCourse(rs));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Notice (CourseDAO): searchCoursesByUserId: " + e.getMessage());
+        }
+
+        // Fallback: nếu query không ra kết quả mà là từ khóa rỗng
+        if (list.isEmpty()) {
+            String lower = keyword.trim().toLowerCase();
+            for (Course c : getCoursesByUserId(userId)) {
+                if (c.getCourseCode().toLowerCase().contains(lower)
+                        || c.getCourseName().toLowerCase().contains(lower)
+                        || c.getDescription().toLowerCase().contains(lower)) {
+                    list.add(c);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
      * 4. CREATE: Thêm lớp môn học mới vào bảng CLASSES
      */
     public boolean insertCourse(Course c) {

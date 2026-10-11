@@ -231,11 +231,14 @@ public class UserDAO extends DBContext {
             ps.setString(4, u.getRole());
             int affected = ps.executeUpdate();
             if (affected > 0) {
-                if (u.getClassId() != null) {
-                    try (ResultSet rs = ps.getGeneratedKeys()) {
-                        if (rs.next()) {
-                            int newUserId = rs.getInt(1);
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int newUserId = rs.getInt(1);
+                        if (u.getClassId() != null) {
                             insertUserClass(newUserId, u.getClassId());
+                        } else if ("Student".equalsIgnoreCase(u.getRole())) {
+                            // Tự động ghi danh sinh viên mới vào tất cả các lớp của học kỳ hiện tại
+                            enrollStudentInAllClasses(newUserId);
                         }
                     }
                 }
@@ -262,6 +265,18 @@ public class UserDAO extends DBContext {
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             System.err.println("insertUserClass: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 11b. Helper: Tự động ghi danh sinh viên mới vào toàn bộ các lớp học hiện có
+    public boolean enrollStudentInAllClasses(int userId) {
+        String sql = "INSERT INTO USER_CLASS (user_id, class_id) SELECT ?, class_id FROM CLASSES";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.err.println("enrollStudentInAllClasses: " + e.getMessage());
             return false;
         }
     }

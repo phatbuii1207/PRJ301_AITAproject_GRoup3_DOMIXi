@@ -33,13 +33,13 @@ public class HomeServlet extends HttpServlet {
             return;
         }
 
-        // 2. Xử lý tìm kiếm môn học nếu có từ khóa search
+        // 2. Xử lý lấy danh sách môn học theo phân quyền (Giảng viên phụ trách hoặc Sinh viên tham gia)
         String search = request.getParameter("search");
         List<Course> list;
         if (search != null && !search.trim().isEmpty()) {
-            list = courseDAO.searchCourses(search.trim());
+            list = courseDAO.searchCoursesByUserId(currentUser.getUserId(), search.trim());
         } else {
-            list = courseDAO.getAllCourses();
+            list = courseDAO.getCoursesByUserId(currentUser.getUserId());
         }
 
         // 3. Đóng gói dữ liệu sang phạm vi Request (Model -> View)

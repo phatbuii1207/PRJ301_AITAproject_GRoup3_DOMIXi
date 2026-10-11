@@ -1,8 +1,11 @@
 package com.fpt.aita.controller;
 
 import com.fpt.aita.dal.AssignmentDAO;
+import com.fpt.aita.dal.CourseDAO;
 import com.fpt.aita.dal.SubmissionDAO;
+import com.fpt.aita.dal.UserDAO;
 import com.fpt.aita.model.Assignment;
+import com.fpt.aita.model.Course;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.model.User;
 import java.io.File;
@@ -44,6 +47,8 @@ public class CourseDetailServlet extends HttpServlet {
 
     private AssignmentDAO assignmentDAO = new AssignmentDAO();
     private SubmissionDAO submissionDAO = new SubmissionDAO();
+    private CourseDAO courseDAO = new CourseDAO();
+    private UserDAO userDAO = new UserDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -83,6 +88,16 @@ public class CourseDetailServlet extends HttpServlet {
                 else if (upper.contains("DBI202") || upper.contains("PRF192")) courseId = 4;
                 else if (upper.contains("WED201")) courseId = 5;
                 else courseId = 1;
+            }
+        }
+
+        // 3b. Phân quyền: Giảng viên chỉ được quản lý các môn mà mình được phân công
+        if ("Lecturer".equalsIgnoreCase(currentUser.getRole())) {
+            List<Integer> allowedClasses = userDAO.getClassIdsByUserId(currentUser.getUserId());
+            if (allowedClasses != null && !allowedClasses.isEmpty() && !allowedClasses.contains(courseId)) {
+                session.setAttribute("flashError", "Bạn không được phân công phụ trách môn học này!");
+                response.sendRedirect("home");
+                return;
             }
         }
 
@@ -314,8 +329,19 @@ public class CourseDetailServlet extends HttpServlet {
         response.sendRedirect("course?id=" + courseId);
     }
 
-    // Helper: Cung cấp thông tin môn học tương thích 4 môn học chuẩn EduNext
+    // Helper: Cung cấp thông tin môn học (ưu tiên truy vấn trực tiếp từ bảng CLASSES)
     private Map<String, Object> getCourseInfo(int courseId) {
+        Course courseObj = courseDAO.getCourseById(courseId);
+        if (courseObj != null) {
+            Map<String, Object> c = new HashMap<>();
+            c.put("id", courseObj.getCourseId());
+            c.put("code", courseObj.getCourseCode());
+            c.put("name", courseObj.getCourseName());
+            c.put("description", courseObj.getDescription());
+            c.put("totalSlots", courseObj.getTotalSlots());
+            return c;
+        }
+
         Map<String, Object> c = new HashMap<>();
         c.put("id", courseId);
         switch (courseId) {

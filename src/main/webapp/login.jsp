@@ -203,7 +203,7 @@
     <!-- Left Panel -->
     <div class="left-panel">
         <div class="logo-img">
-            <span>EduNext Learning</span>
+            <span>Mixi Learning</span>
         </div>
         <h1>MIXI ASSIGN</h1>
         <p>Nền tảng học tập kiến tạo xã hội. Kết nối Giảng viên và<br>Sinh viên thông qua phương pháp học tập chủ động.</p>

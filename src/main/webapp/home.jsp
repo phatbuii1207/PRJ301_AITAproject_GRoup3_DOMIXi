@@ -387,9 +387,6 @@
         <a href="home" class="nav-icon active" title="Trang chủ (My Courses)">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
         </a>
-        <a href="javascript:void(0)" onclick="alert('Lịch học kỳ FALL 2026 đang diễn ra theo kế hoạch đào tạo!')" class="nav-icon" title="Thời khóa biểu / Lịch học">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-        </a>
         
         <a href="logout" class="nav-icon nav-bottom" title="Đăng xuất (${sessionScope.currentUser.username})">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -401,8 +398,6 @@
         <!-- Top Tabs -->
         <div class="top-nav">
             <a href="home" class="tab-btn active">Courses</a>
-            <a href="javascript:void(0)" onclick="alert('Module Projects liên kết Static Code Analysis AST đang hoàn thiện!')" class="tab-btn">Projects</a>
-            <a href="javascript:void(0)" onclick="alert('Tài liệu học tập và tiêu chuẩn Rubric RBL sẵn sàng tại thư mục docs!')" class="tab-btn">Reference</a>
             
             <a href="logout" class="logout-btn">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -423,6 +418,14 @@
         </div>
 
         <!-- Info Alert -->
+        <c:if test="${not empty sessionScope.flashError}">
+            <div style="background:#fee2e2; color:#b91c1c; padding:12px 18px; border-radius:10px; margin-bottom: 16px; border:1px solid #fecaca; font-weight:600; display:flex; align-items:center; gap:8px;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2"/></svg>
+                <span>${sessionScope.flashError}</span>
+            </div>
+            <c:remove var="flashError" scope="session"/>
+        </c:if>
+
         <div class="info-alert">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             Dữ liệu kết nối SQL Server thời gian thực &bull; Cổng học tập EduNext
