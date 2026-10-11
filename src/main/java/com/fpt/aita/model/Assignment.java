@@ -101,4 +101,14 @@ public class Assignment {
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
+
+    /**
+     * Kiểm tra bài tập đã quá hạn nộp chưa (so sánh thời gian hiện tại với deadline)
+     */
+    public boolean isExpired() {
+        if (deadline == null) {
+            return false;
+        }
+        return System.currentTimeMillis() > deadline.getTime();
+    }
 }

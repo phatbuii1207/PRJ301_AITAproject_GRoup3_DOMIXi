@@ -6,8 +6,10 @@ import com.fpt.aita.model.Assignment;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.model.User;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -30,7 +32,7 @@ import javax.servlet.http.Part;
 /**
  * THÀNH VIÊN 3: CHI TIẾT MÔN HỌC & PHÂN QUYỀN BÀI TẬP
  * Servlet: /course
- * Hỗ trợ Upload File Kéo Thả (Drag & Drop) & Lưu Database SUBMISSIONS
+ * Hỗ trợ Upload File Kéo Thả (Drag & Drop), Kiểm tra Deadline, Tải File Bài Nộp
  */
 @WebServlet(name = "CourseDetailServlet", urlPatterns = {"/course"})
 @MultipartConfig(
@@ -55,7 +57,14 @@ public class CourseDetailServlet extends HttpServlet {
             return;
         }
 
-        // 2. Tiếp nhận mã môn học (hỗ trợ cả id, courseId dạng số và chuỗi mã môn như PRJ301)
+        // 2. Tiếp nhận action đặc biệt (Tải file bài nộp)
+        String action = request.getParameter("action");
+        if ("download_submission".equals(action)) {
+            handleDownloadSubmission(request, response, currentUser);
+            return;
+        }
+
+        // 3. Tiếp nhận mã môn học (hỗ trợ cả id, courseId dạng số và chuỗi mã môn như PRJ301)
         String courseIdStr = request.getParameter("id");
         if (courseIdStr == null || courseIdStr.trim().isEmpty()) {
             courseIdStr = request.getParameter("courseId");
@@ -77,22 +86,27 @@ public class CourseDetailServlet extends HttpServlet {
             }
         }
 
-        // 3. Lấy thông tin cơ bản môn học (Hỗ trợ cấu trúc 4 môn học EduNext)
+        // 4. Lấy thông tin cơ bản môn học (Hỗ trợ cấu trúc 4 môn học EduNext)
         Map<String, Object> courseInfo = getCourseInfo(courseId);
         request.setAttribute("course", courseInfo);
         request.setAttribute("courseId", courseId);
 
-        // 4. Lấy danh sách bài tập của môn học này từ AssignmentDAO (TV3)
+        // 5. Lấy danh sách bài tập của môn học này từ AssignmentDAO (TV3)
         List<Assignment> assignmentList = assignmentDAO.getAssignmentsByCourse(courseId);
         request.setAttribute("assignmentList", assignmentList);
 
-        // 5. Lấy danh sách bài nộp của sinh viên nếu là Student
-        if ("Student".equalsIgnoreCase(currentUser.getRole())) {
+        // 6. Phân quyền hiển thị dữ liệu bài nộp
+        if ("Lecturer".equalsIgnoreCase(currentUser.getRole())) {
+            // Giảng viên: Nạp toàn bộ bài nộp của các sinh viên thuộc môn học này
+            Map<Integer, List<Submission>> courseSubmissionsMap = submissionDAO.getSubmissionsMapByCourse(courseId);
+            request.setAttribute("courseSubmissionsMap", courseSubmissionsMap);
+        } else if ("Student".equalsIgnoreCase(currentUser.getRole())) {
+            // Sinh viên: Nạp danh sách bài đã nộp của cá nhân
             Map<Integer, Submission> submissionMap = submissionDAO.getStudentSubmissionsForCourse(currentUser.getUserId(), courseId);
             request.setAttribute("submissionMap", submissionMap);
         }
 
-        // 6. Chuyển tiếp sang view hiển thị chi tiết môn học
+        // 7. Chuyển tiếp sang view hiển thị chi tiết môn học
         request.getRequestDispatcher("course_detail.jsp").forward(request, response);
     }
 
@@ -197,6 +211,18 @@ public class CourseDetailServlet extends HttpServlet {
                         assignmentId = Integer.parseInt(assignmentIdStr.trim());
                     }
                 } catch (NumberFormatException ignored) {}
+
+                // =================================================================
+                // KIỂM TRA HẠN NỘP (DEADLINE VALIDATION)
+                // =================================================================
+                Assignment targetAssignment = assignmentDAO.getAssignmentById(assignmentId);
+                if (targetAssignment != null && targetAssignment.isExpired()) {
+                    session.setAttribute("flashError", "❌ Bài tập #" + assignmentId + " (" + targetAssignment.getTitle() 
+                            + ") đã hết hạn nộp (Deadline: " + targetAssignment.getDeadline() 
+                            + ")! Bạn không thể nộp hoặc chỉnh sửa bài làm nữa.");
+                    response.sendRedirect("course?id=" + courseId);
+                    return;
+                }
 
                 Part filePart = null;
                 try {
@@ -326,4 +352,66 @@ public class CourseDetailServlet extends HttpServlet {
         }
         return c;
     }
+
+    /**
+     * Tải tệp bài nộp của sinh viên (phục vụ Giảng viên chấm điểm hoặc Sinh viên tải lại bài làm)
+     */
+    private void handleDownloadSubmission(HttpServletRequest request, HttpServletResponse response, User currentUser) throws IOException {
+        String subIdStr = request.getParameter("submissionId");
+        int subId = 0;
+        try {
+            if (subIdStr != null && !subIdStr.trim().isEmpty()) {
+                subId = Integer.parseInt(subIdStr.trim());
+            }
+        } catch (NumberFormatException ignored) {}
+
+        Submission sub = submissionDAO.getSubmissionById(subId);
+        if (sub == null || sub.getFilePath() == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy bài nộp.");
+            return;
+        }
+
+        // Quyền bảo mật: Chỉ Giảng viên hoặc chính Sinh viên nộp bài mới được tải
+        if (!"Lecturer".equalsIgnoreCase(currentUser.getRole()) && currentUser.getUserId() != sub.getStudentId()) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền tải bài nộp này.");
+            return;
+        }
+
+        String realPath = request.getServletContext().getRealPath(sub.getFilePath());
+        File file = null;
+        if (realPath != null) {
+            file = new File(realPath);
+        }
+        if (file == null || !file.exists()) {
+            String rootPath = request.getServletContext().getRealPath("/");
+            if (rootPath != null && rootPath.contains("target")) {
+                String srcPath = rootPath.substring(0, rootPath.indexOf("target")) + "src/main/webapp" + sub.getFilePath();
+                file = new File(srcPath);
+            }
+        }
+
+        if (file == null || !file.exists()) {
+            HttpSession session = request.getSession();
+            session.setAttribute("flashError", "Tệp bài nộp không tồn tại trên hệ thống lưu trữ máy chủ!");
+            String cId = request.getParameter("courseId") != null ? request.getParameter("courseId") : "1";
+            response.sendRedirect("course?id=" + cId);
+            return;
+        }
+
+        String downloadFileName = sub.getFileNameOnly();
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + downloadFileName + "\"");
+        response.setContentLengthLong(file.length());
+
+        try (InputStream in = Files.newInputStream(file.toPath());
+             OutputStream out = response.getOutputStream()) {
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) != -1) {
+                out.write(buf, 0, len);
+            }
+            out.flush();
+        }
+    }
 }
+

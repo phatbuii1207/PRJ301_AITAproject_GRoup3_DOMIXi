@@ -34,9 +34,9 @@ public class AssignmentDAO extends DBContext {
         return list;
     }
 
-    // 2. READ: Tìm 1 bài tập theo ID (dùng khi bấm nút "Sửa")
+    // 2. READ: Tìm 1 bài tập theo ID (dùng khi bấm nút "Sửa" hoặc kiểm tra Deadline)
     public Assignment getAssignmentById(int id) {
-        String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.title, a.description, a.created_at "
+        String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.course_id, a.title, a.description, a.deadline, a.created_at "
                 + "FROM ASSIGNMENTS a "
                 + "JOIN USERS u ON a.lecturer_id = u.user_id "
                 + "WHERE a.assignment_id = ?";
@@ -49,8 +49,10 @@ public class AssignmentDAO extends DBContext {
                         rs.getInt("assignment_id"),
                         rs.getInt("lecturer_id"),
                         rs.getString("full_name"),
+                        rs.getInt("course_id"),
                         rs.getString("title"),
                         rs.getString("description"),
+                        rs.getTimestamp("deadline"),
                         rs.getTimestamp("created_at")
                 );
             }

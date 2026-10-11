@@ -273,6 +273,34 @@
             display: inline-block;
         }
 
+        .badge-expired {
+            background: #fee2e2;
+            color: #991b1b;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .deadline-expired {
+            color: #dc2626;
+            background: #fee2e2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .deadline-active {
+            color: #059669;
+            background: #d1fae5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         .btn-secondary {
             background: #f1f5f9;
             color: #334155;
@@ -281,6 +309,40 @@
         .btn-secondary:hover {
             background: #e2e8f0;
             color: #1e293b;
+        }
+
+        .btn-disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-disabled:hover {
+            background: #e2e8f0;
+            color: #94a3b8;
+        }
+
+        .btn-download {
+            background: #0284c7;
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+        .btn-download:hover {
+            background: #0369a1;
+            color: #ffffff;
+        }
+
+        .modal-box-large {
+            max-width: 760px;
+            width: 95%;
         }
 
         /* Modal Backdrop & Box */
@@ -516,24 +578,39 @@
                                     </td>
                                     <td>${a.lecturerName}</td>
                                     <td>
-                                        <span class="deadline-text">
-                                            <c:choose>
-                                                <c:when test="${not empty a.deadline}">${a.deadline}</c:when>
-                                                <c:otherwise>23:59 Chủ Nhật</c:otherwise>
-                                            </c:choose>
-                                        </span>
+                                        <c:choose>
+                                            <c:when test="${a.expired}">
+                                                <span class="deadline-expired" title="Bài tập đã hết hạn nộp bài!">
+                                                    ⏰ Hết hạn: ${a.deadline}
+                                                </span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="deadline-active">
+                                                    ⏳ <c:choose>
+                                                        <c:when test="${not empty a.deadline}">${a.deadline}</c:when>
+                                                        <c:otherwise>23:59 Chủ Nhật</c:otherwise>
+                                                    </c:choose>
+                                                </span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </td>
                                     <c:if test="${sessionScope.currentUser.role == 'Student'}">
                                         <td>
                                             <c:choose>
                                                 <c:when test="${not empty sub}">
                                                     <span class="badge-submitted">✅ Đã nộp bài</span>
+                                                    <c:if test="${a.expired}">
+                                                        <span class="badge-expired" style="margin-left:4px;">🔒 Khóa</span>
+                                                    </c:if>
                                                     <div style="font-size:12px; color:#334155; margin-top:5px; display:flex; align-items:center; gap:4px;">
                                                         <span>📁</span> <b>${sub.fileNameOnly}</b> <span style="color:#64748b;">(${sub.formattedFileSize})</span>
                                                     </div>
                                                     <div style="font-size:11px; color:#0284c7; margin-top:3px;" title="Mã băm SHA-256 toàn vẹn: ${sub.sha256Hash}">
                                                         SHA: <code>${sub.sha256Hash.substring(0, 14)}...</code>
                                                     </div>
+                                                </c:when>
+                                                <c:when test="${a.expired}">
+                                                    <span class="badge-expired">🔒 Quá hạn</span>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <span class="badge-pending">⏳ Chưa nộp</span>
@@ -544,6 +621,11 @@
                                     <td>
                                         <!-- PHÂN QUYỀN GIẢNG VIÊN -->
                                         <c:if test="${sessionScope.currentUser.role == 'Lecturer'}">
+                                            <button type="button" class="btn btn-secondary" onclick="openLecturerSubmissionsModal(${a.assignmentId}, '${a.title}')" style="margin-right: 6px;">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                Bài nộp (${empty courseSubmissionsMap[a.assignmentId] ? 0 : courseSubmissionsMap[a.assignmentId].size()})
+                                            </button>
+
                                             <form action="course" method="POST" style="display:inline;" onsubmit="return confirm('Xác nhận xóa bài tập này?')">
                                                 <input type="hidden" name="action" value="delete_assignment" />
                                                 <input type="hidden" name="assignmentId" value="${a.assignmentId}" />
@@ -555,10 +637,15 @@
                                         <!-- PHÂN QUYỀN SINH VIÊN -->
                                         <c:if test="${sessionScope.currentUser.role == 'Student'}">
                                             <c:choose>
+                                                <c:when test="${a.expired}">
+                                                    <button type="button" class="btn btn-disabled" disabled title="Bài tập đã hết hạn nộp! Không thể chỉnh sửa hoặc nộp lại.">
+                                                        🔒 Đã hết hạn
+                                                    </button>
+                                                </c:when>
                                                 <c:when test="${not empty sub}">
                                                     <button type="button" class="btn btn-secondary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">
-                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                                        Nộp lại
+                                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                                        Sửa / Nộp lại
                                                     </button>
                                                 </c:when>
                                                 <c:otherwise>
@@ -762,6 +849,117 @@
                 }
             });
         });
+
+        // =====================================================================
+        // SCRIPT QUẢN LÝ MODAL BÀI NỘP DÀNH CHO GIẢNG VIÊN (LECTURER)
+        // =====================================================================
+        function openLecturerSubmissionsModal(assignmentId, title) {
+            document.getElementById('lecturerModalTitle').innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22" style="color:#0076c8;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg> Danh Sách Bài Nộp: #' + assignmentId;
+            document.getElementById('lecturerModalSubTitle').innerText = title || '';
+            
+            var store = document.getElementById('subList_' + assignmentId);
+            var contentBox = document.getElementById('lecturerSubmissionsContent');
+            if (store) {
+                contentBox.innerHTML = store.innerHTML;
+            } else {
+                contentBox.innerHTML = '<div class="empty-state" style="padding:24px;">Chưa có dữ liệu bài nộp cho bài tập này.</div>';
+            }
+            document.getElementById('lecturerSubmissionsModal').style.display = 'flex';
+        }
+
+        function closeLecturerSubmissionsModal() {
+            document.getElementById('lecturerSubmissionsModal').style.display = 'none';
+        }
+
+        function closeLecturerModalOnBackdrop(e) {
+            if (e.target.id === 'lecturerSubmissionsModal') {
+                closeLecturerSubmissionsModal();
+            }
+        }
     </script>
+
+    <!-- ============================================================= -->
+    <!-- MODAL DANH SÁCH BÀI NỘP CỦA SINH VIÊN (CHO GIẢNG VIÊN)       -->
+    <!-- ============================================================= -->
+    <div id="lecturerSubmissionsModal" class="modal-backdrop" style="display: none;" onclick="closeLecturerModalOnBackdrop(event)">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <div>
+                    <h3 id="lecturerModalTitle" style="margin:0; font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="22" height="22" style="color:#0076c8;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        Danh Sách Bài Nộp Của Sinh Viên
+                    </h3>
+                    <p id="lecturerModalSubTitle" style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);"></p>
+                </div>
+                <button type="button" class="btn-close" onclick="closeLecturerSubmissionsModal()">&times;</button>
+            </div>
+
+            <div id="lecturerSubmissionsContent" style="max-height: 420px; overflow-y: auto;">
+                <!-- Nội dung nạp động từ submissionsDataStore -->
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeLecturerSubmissionsModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHO LƯU TRỮ DỮ LIỆU BÀI NỘP CHO GIẢNG VIÊN (ẨN) -->
+    <c:if test="${sessionScope.currentUser.role == 'Lecturer'}">
+        <div id="submissionsDataStore" style="display: none;">
+            <c:forEach items="${assignmentList}" var="a">
+                <div id="subList_${a.assignmentId}">
+                    <c:choose>
+                        <c:when test="${not empty courseSubmissionsMap[a.assignmentId]}">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Sinh Viên</th>
+                                        <th>Tệp Nộp</th>
+                                        <th>Thời Gian Nộp</th>
+                                        <th>Mã Băm SHA-256</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:forEach items="${courseSubmissionsMap[a.assignmentId]}" var="sub" varStatus="loop">
+                                        <tr>
+                                            <td style="color:var(--text-muted);">${loop.index + 1}</td>
+                                            <td>
+                                                <b>${sub.studentName}</b><br/>
+                                                <span style="font-size:12px; color:var(--text-muted);">ID: #${sub.studentId}</span>
+                                            </td>
+                                            <td>
+                                                <span>📁</span> <b>${sub.fileNameOnly}</b><br/>
+                                                <span style="font-size:12px; color:#64748b;">${sub.formattedFileSize}</span>
+                                            </td>
+                                            <td>
+                                                <span style="font-size:12px; color:#334155;">${sub.submittedAt}</span>
+                                            </td>
+                                            <td>
+                                                <code style="font-size:11px; color:#0284c7;" title="${sub.sha256Hash}">${sub.sha256Hash.substring(0, 16)}...</code>
+                                            </td>
+                                            <td>
+                                                <a href="course?action=download_submission&submissionId=${sub.submissionId}&courseId=${courseId}" class="btn-download" title="Tải file bài nộp về máy">
+                                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                                    Tải về
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </tbody>
+                            </table>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="empty-state" style="padding: 30px;">
+                                Chưa có sinh viên nào nộp bài cho đề bài này.
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </c:forEach>
+        </div>
+    </c:if>
 </body>
 </html>
