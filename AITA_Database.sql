@@ -60,16 +60,6 @@ CREATE TABLE [dbo].[CLASSES](
     [class_name] [nvarchar](100) NOT NULL
 );
 
--- Bảng Môn học (Cổng học tập EduNext Portal)
-CREATE TABLE [dbo].[COURSES](
-    [course_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
-    [course_code] [varchar](20) NOT NULL UNIQUE,
-    [course_name] [nvarchar](150) NOT NULL,
-    [description] [nvarchar](500) NULL,
-    [badge] [varchar](20) NOT NULL DEFAULT 'TECH',
-    [total_slots] [int] NOT NULL DEFAULT 30
-);
-
 -- Bảng Người dùng (Giảng viên, Sinh viên, Quản trị viên)
 CREATE TABLE [dbo].[USERS](
     [user_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -92,13 +82,13 @@ CREATE TABLE [dbo].[USER_CLASS](
 CREATE TABLE [dbo].[ASSIGNMENTS](
     [assignment_id] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
     [lecturer_id] [int] NOT NULL,
-    [course_id] [int] NULL,
+    [course_id] [int] NULL,          -- Môn học liên kết (class_id trong CLASSES)
     [title] [nvarchar](150) NOT NULL,
     [description] [nvarchar](500) NULL,
-    [deadline] [datetime] NULL,
+    [deadline] [datetime] NULL,      -- Hạn nộp bài
     [created_at] [datetime] NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY ([lecturer_id]) REFERENCES [dbo].[USERS]([user_id]),
-    FOREIGN KEY ([course_id]) REFERENCES [dbo].[COURSES]([course_id])
+    FOREIGN KEY ([course_id]) REFERENCES [dbo].[CLASSES]([class_id])
 );
 
 -- Bảng Bài nộp của Sinh viên
@@ -285,43 +275,57 @@ INSERT INTO [dbo].[USERS] ([username], [password_hash], [full_name], [role]) VAL
 
 -- 2.4. Phân công Lớp học trong bảng USER_CLASS
 -- Giảng viên: 2 người phụ trách 2 lớp (user_id 1 dạy lớp 1, 2; user_id 2 dạy lớp 3, 4); 1 người phụ trách 1 lớp (user_id 3 dạy lớp 5)
--- Sinh viên: Mỗi lớp 15 sinh viên (Lớp 1: user_id 4..18; Lớp 2: user_id 19..33; Lớp 3: user_id 34..48; Lớp 4: user_id 49..63; Lớp 5: user_id 64..78)
+-- Sinh viên: Tất cả 75 sinh viên (user_id 4..78) đều học cả 5 môn (class_id 1..5)
 INSERT INTO [dbo].[USER_CLASS] ([user_id], [class_id]) VALUES
 -- Giảng viên phụ trách (2 giảng viên dạy 2 lớp, 1 giảng viên dạy 1 lớp)
 (1, 1), (1, 2), -- ThS. Hoàng Nhật Nam dạy PRJ301 và CSD201
 (2, 3), (2, 4), -- TS. Phan Thị Lan dạy LAB211 và PRF192
 (3, 5),         -- ThS. Lê Minh Quang dạy WED201
 
--- Lớp 1: SE1801 (PRJ301) - 15 sinh viên
-(4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 1), (10, 1), (11, 1), (12, 1), (13, 1), (14, 1), (15, 1), (16, 1), (17, 1), (18, 1),
+-- Tất cả 75 sinh viên học Lớp 1: SE1801 (PRJ301)
+(4,1),(5,1),(6,1),(7,1),(8,1),(9,1),(10,1),(11,1),(12,1),(13,1),(14,1),(15,1),(16,1),(17,1),(18,1),
+(19,1),(20,1),(21,1),(22,1),(23,1),(24,1),(25,1),(26,1),(27,1),(28,1),(29,1),(30,1),(31,1),(32,1),(33,1),
+(34,1),(35,1),(36,1),(37,1),(38,1),(39,1),(40,1),(41,1),(42,1),(43,1),(44,1),(45,1),(46,1),(47,1),(48,1),
+(49,1),(50,1),(51,1),(52,1),(53,1),(54,1),(55,1),(56,1),(57,1),(58,1),(59,1),(60,1),(61,1),(62,1),(63,1),
+(64,1),(65,1),(66,1),(67,1),(68,1),(69,1),(70,1),(71,1),(72,1),(73,1),(74,1),(75,1),(76,1),(77,1),(78,1),
 
--- Lớp 2: SE1802 (CSD201) - 15 sinh viên
-(19, 2), (20, 2), (21, 2), (22, 2), (23, 2), (24, 2), (25, 2), (26, 2), (27, 2), (28, 2), (29, 2), (30, 2), (31, 2), (32, 2), (33, 2),
+-- Tất cả 75 sinh viên học Lớp 2: SE1802 (CSD201)
+(4,2),(5,2),(6,2),(7,2),(8,2),(9,2),(10,2),(11,2),(12,2),(13,2),(14,2),(15,2),(16,2),(17,2),(18,2),
+(19,2),(20,2),(21,2),(22,2),(23,2),(24,2),(25,2),(26,2),(27,2),(28,2),(29,2),(30,2),(31,2),(32,2),(33,2),
+(34,2),(35,2),(36,2),(37,2),(38,2),(39,2),(40,2),(41,2),(42,2),(43,2),(44,2),(45,2),(46,2),(47,2),(48,2),
+(49,2),(50,2),(51,2),(52,2),(53,2),(54,2),(55,2),(56,2),(57,2),(58,2),(59,2),(60,2),(61,2),(62,2),(63,2),
+(64,2),(65,2),(66,2),(67,2),(68,2),(69,2),(70,2),(71,2),(72,2),(73,2),(74,2),(75,2),(76,2),(77,2),(78,2),
 
--- Lớp 3: SE1803 (LAB211) - 15 sinh viên
-(34, 3), (35, 3), (36, 3), (37, 3), (38, 3), (39, 3), (40, 3), (41, 3), (42, 3), (43, 3), (44, 3), (45, 3), (46, 3), (47, 3), (48, 3),
+-- Tất cả 75 sinh viên học Lớp 3: SE1803 (LAB211)
+(4,3),(5,3),(6,3),(7,3),(8,3),(9,3),(10,3),(11,3),(12,3),(13,3),(14,3),(15,3),(16,3),(17,3),(18,3),
+(19,3),(20,3),(21,3),(22,3),(23,3),(24,3),(25,3),(26,3),(27,3),(28,3),(29,3),(30,3),(31,3),(32,3),(33,3),
+(34,3),(35,3),(36,3),(37,3),(38,3),(39,3),(40,3),(41,3),(42,3),(43,3),(44,3),(45,3),(46,3),(47,3),(48,3),
+(49,3),(50,3),(51,3),(52,3),(53,3),(54,3),(55,3),(56,3),(57,3),(58,3),(59,3),(60,3),(61,3),(62,3),(63,3),
+(64,3),(65,3),(66,3),(67,3),(68,3),(69,3),(70,3),(71,3),(72,3),(73,3),(74,3),(75,3),(76,3),(77,3),(78,3),
 
--- Lớp 4: SE1804 (PRF192) - 15 sinh viên
-(49, 4), (50, 4), (51, 4), (52, 4), (53, 4), (54, 4), (55, 4), (56, 4), (57, 4), (58, 4), (59, 4), (60, 4), (61, 4), (62, 4), (63, 4),
+-- Tất cả 75 sinh viên học Lớp 4: SE1804 (PRF192)
+(4,4),(5,4),(6,4),(7,4),(8,4),(9,4),(10,4),(11,4),(12,4),(13,4),(14,4),(15,4),(16,4),(17,4),(18,4),
+(19,4),(20,4),(21,4),(22,4),(23,4),(24,4),(25,4),(26,4),(27,4),(28,4),(29,4),(30,4),(31,4),(32,4),(33,4),
+(34,4),(35,4),(36,4),(37,4),(38,4),(39,4),(40,4),(41,4),(42,4),(43,4),(44,4),(45,4),(46,4),(47,4),(48,4),
+(49,4),(50,4),(51,4),(52,4),(53,4),(54,4),(55,4),(56,4),(57,4),(58,4),(59,4),(60,4),(61,4),(62,4),(63,4),
+(64,4),(65,4),(66,4),(67,4),(68,4),(69,4),(70,4),(71,4),(72,4),(73,4),(74,4),(75,4),(76,4),(77,4),(78,4),
 
--- Lớp 5: SE1805 (WED201) - 15 sinh viên
-(64, 5), (65, 5), (66, 5), (67, 5), (68, 5), (69, 5), (70, 5), (71, 5), (72, 5), (73, 5), (74, 5), (75, 5), (76, 5), (77, 5), (78, 5);
+-- Tất cả 75 sinh viên học Lớp 5: SE1805 (WED201)
+(4,5),(5,5),(6,5),(7,5),(8,5),(9,5),(10,5),(11,5),(12,5),(13,5),(14,5),(15,5),(16,5),(17,5),(18,5),
+(19,5),(20,5),(21,5),(22,5),(23,5),(24,5),(25,5),(26,5),(27,5),(28,5),(29,5),(30,5),(31,5),(32,5),(33,5),
+(34,5),(35,5),(36,5),(37,5),(38,5),(39,5),(40,5),(41,5),(42,5),(43,5),(44,5),(45,5),(46,5),(47,5),(48,5),
+(49,5),(50,5),(51,5),(52,5),(53,5),(54,5),(55,5),(56,5),(57,5),(58,5),(59,5),(60,5),(61,5),(62,5),(63,5),
+(64,5),(65,5),(66,5),(67,5),(68,5),(69,5),(70,5),(71,5),(72,5),(73,5),(74,5),(75,5),(76,5),(77,5),(78,5);
 
--- 2.5. Thêm Môn học chuẩn EduNext Portal (Courses)
-INSERT INTO [dbo].[COURSES] ([course_code], [course_name], [description], [badge], [total_slots]) VALUES
-('PRJ301', N'Java Web Application Development', N'Học phần Servlet, JSP, JDBC, MVC Model và Static Code Analysis AST.', 'CORE', 30),
-('CSD201', N'Data Structures and Algorithms', N'Cấu trúc dữ liệu nâng cao, Binary Trees, Graph Traversal, Sorting.', 'TECH', 30),
-('PRO192', N'Object-Oriented Programming with Java', N'Lập trình hướng đối tượng với Java: OOP principles, Polymorphism, Collections.', 'BASIC', 30),
-('DBI202', N'Introduction to Databases', N'Cơ sở dữ liệu quan hệ, SQL Server, Chuẩn hóa 3NF và RDBMS.', 'DATABASE', 30);
-
--- 2.6. Thêm Đề bài (Assignments)
+-- 2.5. Thêm Đề bài (Assignments) - có course_id và deadline
 INSERT INTO [dbo].[ASSIGNMENTS] ([lecturer_id], [course_id], [title], [description], [deadline], [created_at]) VALUES
-(1, 1, N'Assignment 1: Data Structures & Sorting Optimization', N'Cài đặt và tối ưu các thuật toán sắp xếp và tìm kiếm mảng dữ liệu.', '2026-10-20 23:59:00', '2026-09-01 08:00:00'),
-(2, 1, N'Assignment 2: Java Web MVC & JDBC Best Practices', N'Phát triển ứng dụng quản lý sinh viên với chuẩn MVC2, an toàn kết nối JDBC.', '2026-10-25 23:59:00', '2026-09-05 09:30:00'),
-(3, 1, N'Assignment 3: AST Static Code Parsing Implementation', N'Viết module bóc tách cây cú pháp trừu tượng phát hiện code smells.', '2026-10-30 23:59:00', '2026-09-10 14:00:00'),
-(1, 2, N'CSD201 Lab: Binary Search Tree & AVL Balancing', N'Cài đặt cấu trúc cây nhị phân tìm kiếm BST và cân bằng cây AVL.', '2026-10-22 23:59:00', '2026-09-12 09:00:00'),
-(1, 3, N'PRO192 Lab: Java OOP Polymorphism & Interfaces', N'Hiện thực các nguyên lý hướng đối tượng Đa hình và Kế thừa.', '2026-10-24 23:59:00', '2026-09-14 10:00:00'),
-(1, 4, N'DBI202 Lab: Database Normalization 3NF & SQL', N'Thiết kế lược đồ quan hệ chuẩn 3NF và viết truy vấn Subquery, JOIN.', '2026-10-26 23:59:00', '2026-09-15 14:00:00');
+(1, 1, N'Assignment 1: Sorting & Complexity Analysis', N'Cài đặt và tối ưu các thuật toán sắp xếp, phân tích độ phức tạp.', '2026-09-20 23:59:00', '2026-09-01 08:00:00'),
+(1, 2, N'Assignment 2: Data Structures with Java', N'Cài đặt cấu trúc dữ liệu: LinkedList, Stack, Queue, Binary Tree.', '2026-09-22 23:59:00', '2026-09-05 09:30:00'),
+(2, 3, N'Assignment 3: OOP Lab - Inheritance & Polymorphism', N'Bài thực hành OOP: Kế thừa, giao diện, đa hình với Java.', '2026-09-25 23:59:00', '2026-09-08 09:00:00'),
+(2, 4, N'Assignment 4: Programming Fundamentals with C', N'Bài tập lập trình C: Vòng lặp, mảng, con trỏ, hàm.', '2026-09-28 23:59:00', '2026-09-10 08:00:00'),
+(3, 5, N'Assignment 5: Responsive Web Design', N'Thiết kế giao diện Responsive với HTML5, CSS3, Flexbox/Grid.', '2026-10-01 23:59:00', '2026-09-12 08:00:00'),
+(1, 1, N'Assignment 6: Java Web MVC & JDBC Best Practices', N'Phát triển ứng dụng quản lý sinh viên với chuẩn MVC2, an toàn kết nối JDBC.', '2026-10-10 23:59:00', '2026-09-15 09:30:00'),
+(2, 3, N'Assignment 7: AST Static Code Parsing Implementation', N'Viết module bóc tách cây cú pháp trừu tượng phát hiện code smells.', '2026-10-15 23:59:00', '2026-09-18 14:00:00');
 
 -- 2.6. Thêm Danh mục Luật phân tích tĩnh (Rules)
 INSERT INTO [dbo].[RULES] ([rule_code], [category], [name], [weight], [enabled]) VALUES
