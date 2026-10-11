@@ -24,5 +24,19 @@ Hệ thống Hỗ trợ Giảng viên và Sinh viên trong việc kiểm tra, đ
    - Chuột phải Project -> Run (hoặc bấm F6).
 
 ## 👥 Tài khoản thử nghiệm có sẵn trong CSDL
-- **Giảng viên:** gv_namhn (Mật khẩu: 123456)
-- **Sinh viên:** he180001 -> he180030 (Mật khẩu: 123456)
+- **Giảng viên:** `gv_namhn`, `gv_quanglm`, `gv_lanpt` (Mật khẩu: `123456`)
+- **Sinh viên:** `he180001` -> `he180030` (Mật khẩu: `123456`)
+
+## 📋 Phân chia module & Hướng dẫn Test các luồng nghiệp vụ
+### 1. Phân hệ Chi tiết môn học & Quản lý bài tập (`/course?id=...`)
+- **Vai trò Giảng viên (`Lecturer`):**
+  - Giao bài tập mới gắn trực tiếp theo mã môn (`course_id`) kèm hạn nộp (`deadline`).
+  - Chỉnh sửa tiêu đề, mô tả và gia hạn deadline cho bài tập.
+  - Xóa bài tập khỏi môn học.
+  - Xem danh sách sinh viên đã nộp bài, kiểm tra mã băm bảo mật SHA-256 và **tải trực tiếp file bài làm** về máy.
+- **Vai trò Sinh viên (`Student`):**
+  - Xem danh sách bài tập của môn học kèm đếm ngược hạn nộp.
+  - Tự động khóa nộp bài và hiện thông báo nếu bài tập đã quá hạn nộp.
+  - Kéo thả / Chọn tệp mã nguồn (.java, .zip, .rar...) để nộp bài. Hệ thống tự động băm mã SHA-256 xác thực toàn vẹn dữ liệu và lưu vết vào CSDL `SUBMISSIONS`.
+  - Xem lại lịch sử các lần nộp bài của bản thân.
+
