@@ -74,17 +74,28 @@ public class AssignmentDAOTest {
             failed++;
         }
 
-        // TEST CASE 4: Lấy lịch sử nộp bài của sinh viên
+        // TEST CASE 4: Lấy danh sách bài nộp theo bài tập (cho Giảng viên theo dõi)
         try {
-            System.out.print("[TEST 4] Kiểm tra getSubmissionsByStudent(studentId, assignmentId)... ");
-            List<Submission> history = submissionDAO.getSubmissionsByStudent(1, 1);
-            if (history != null) {
-                System.out.println("PASSED (Hàm thực thi không bị crash)");
+            System.out.print("[TEST 4] Kiểm tra getSubmissionsByAssignment(assignmentId)... ");
+            List<Submission> list = submissionDAO.getSubmissionsByAssignment(1);
+            if (list != null) {
+                System.out.println("PASSED (Hàm thực thi tốt, tìm thấy " + list.size() + " bài nộp)");
                 passed++;
             } else {
                 System.out.println("FAILED");
                 failed++;
             }
+        } catch (Exception e) {
+            System.out.println("FAILED: " + e.getMessage());
+            failed++;
+        }
+
+        // TEST CASE 5: Kiểm tra bài nộp mới nhất của sinh viên
+        try {
+            System.out.print("[TEST 5] Kiểm tra getLatestSubmission(studentId, assignmentId)... ");
+            Submission latest = submissionDAO.getLatestSubmission(1, 1);
+            System.out.println("PASSED (Truy vấn thành công" + (latest != null ? ": file " + latest.getFileNameOnly() : ": chưa có bài nộp") + ")");
+            passed++;
         } catch (Exception e) {
             System.out.println("FAILED: " + e.getMessage());
             failed++;
