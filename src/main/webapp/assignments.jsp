@@ -176,6 +176,9 @@
                                 <td>${item.description}</td>
                                 <td>
                                     <div style="display: flex; gap: 8px; align-items: center;">
+                                        <a href="course?id=${item.courseId != null ? item.courseId : 1}" class="btn-edit" style="background:#0284c7; color:#fff;" title="Xem các bài nộp và báo cáo phân tích">
+                                            📊 Xem Báo Cáo
+                                        </a>
                                         <a href="assignments?action=edit&id=${item.assignmentId}" class="btn-edit">Sửa</a>
                                         <a href="assignments?action=delete&id=${item.assignmentId}" class="btn-delete" 
                                            onclick="return confirm('Bạn có chắc muốn xóa bài tập #${item.assignmentId}?')">Xóa</a>
