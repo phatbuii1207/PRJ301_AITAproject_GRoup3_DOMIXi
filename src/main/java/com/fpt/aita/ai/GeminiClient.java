@@ -61,7 +61,7 @@ public class GeminiClient implements AiClient {
             } catch (AiException e) {
                 // Kiểm tra xem lỗi có thể thử lại được không và còn lượt retry không
                 if (e.isRetryable() && attempt <= maxRetries) {
-                    long backoffMs = (long) attempt * 1000L; // 1s, 2s...
+                    long backoffMs = backoffMillis(attempt);
                     System.err.println("[GeminiClient] Gặp lỗi retryable (mã " + e.getStatusCode() + ": " + e.getMessage()
                             + "), thử lại lần " + attempt + "/" + maxRetries + " sau " + backoffMs + "ms");
                     try {
@@ -165,7 +165,7 @@ public class GeminiClient implements AiClient {
             String sanitizedErrorMsg = sanitizeErrorMessage(errorBody, responseCode);
 
             // Xác định retryable: 429 (Rate limit) hoặc 5xx (Lỗi phía server Google)
-            boolean retryable = (responseCode == 429 || (responseCode >= 500 && responseCode < 600));
+            boolean retryable = isRetryableStatus(responseCode);
             throw new AiException(sanitizedErrorMsg, retryable, responseCode);
 
         } catch (SocketTimeoutException te) {
@@ -181,6 +181,17 @@ public class GeminiClient implements AiClient {
                 conn.disconnect();
             }
         }
+    }
+
+    static boolean isRetryableStatus(int responseCode) {
+        return responseCode == 429 || (responseCode >= 500 && responseCode < 600);
+    }
+
+    static long backoffMillis(int attempt) {
+        if (attempt < 1) {
+            throw new IllegalArgumentException("attempt phải lớn hơn 0");
+        }
+        return (long) attempt * 1000L;
     }
 
     /**

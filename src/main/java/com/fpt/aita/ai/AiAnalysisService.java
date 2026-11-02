@@ -305,62 +305,42 @@ public class AiAnalysisService {
     }
 
     /**
-     * Hàm main kiểm thử với MockAiClient (không cần DB thật nếu DB không có, nhưng sẽ thử kết nối).
-     * Chạy 2 lần: lần 2 phải thấy skipped.
+     * Chạy phân tích một bài nộp theo cấu hình môi trường.
      */
     public static void main(String[] args) {
-        System.out.println("=== KIỂM THỬ AiAnalysisService VỚI MOCK AI CLIENT ===\n");
-
-        // Cấu hình mock (provider=mock, không cần API key)
-        AiConfig mockConfig = new AiConfig();
-        AiClient mockClient = new MockAiClient();
-
-        // Dùng DAO thật kết nối SQL Server (nếu Docker đang chạy)
+        AiConfig config = AiConfig.fromEnv();
+        AiClient client = AiClientFactory.create(config);
         AiOptimizationDAO dao = new AiOptimizationDAO();
-
-        if (!dao.isConnected()) {
-            System.err.println("Không kết nối được CSDL, kiểm tra SQL Server/Docker.");
-            return;
+        int submissionId = 1;
+        if (args != null && args.length > 0 && args[0] != null && !args[0].trim().isEmpty()) {
+            try {
+                submissionId = Integer.parseInt(args[0].trim());
+            } catch (NumberFormatException e) {
+                System.err.println("submissionId phải là số nguyên dương.");
+                dao.closeConnection();
+                return;
+            }
         }
 
-        // CodeProvider inline trả code giả lập cho mỗi method (không cần file thật)
-        MethodCodeProvider mockProvider = new MethodCodeProvider() {
-            @Override
-            public String getCode(int submissionId, String fileName, int startLine, int endLine) {
-                // Trả code mẫu khác nhau theo fileName để test cache
-                if ("BubbleSortService.java".equals(fileName)) {
-                    return "public void sortAscending(int[] arr) {\n"
-                            + "    for (int i = 0; i < arr.length - 1; i++) {\n"
-                            + "        for (int j = 0; j < arr.length - i - 1; j++) {\n"
-                            + "            if (arr[j] > arr[j+1]) { int tmp = arr[j]; arr[j] = arr[j+1]; arr[j+1] = tmp; }\n"
-                            + "        }\n"
-                            + "    }\n"
-                            + "}";
+        String extractedRoot = config.getExtractedRoot();
+        MethodCodeProvider codeProvider;
+        if (extractedRoot != null && !extractedRoot.trim().isEmpty()) {
+            codeProvider = new FileMethodCodeProvider(extractedRoot);
+        } else {
+            codeProvider = new MethodCodeProvider() {
+                @Override
+                public String getCode(int id, String fileName, int startLine, int endLine) {
+                    return "";
                 }
-                return "// method code: " + fileName + " lines " + startLine + "-" + endLine;
-            }
-        };
+            };
+        }
 
-        AiAnalysisService service = new AiAnalysisService(mockClient, mockConfig, mockProvider, dao);
-
-        int testSubmissionId = 1;
-
-        System.out.println("--- LẦN CHẠY 1: analyzeSubmission(" + testSubmissionId + ") ---");
-        AiRunSummary summary1 = service.analyzeSubmission(testSubmissionId);
-        System.out.println("Kết quả lần 1: " + summary1);
-        System.out.println();
-
-        System.out.println("--- LẦN CHẠY 2: analyzeSubmission(" + testSubmissionId + ") (phải thấy skipped) ---");
-        AiRunSummary summary2 = service.analyzeSubmission(testSubmissionId);
-        System.out.println("Kết quả lần 2: " + summary2);
-        System.out.println();
-
-        System.out.println("=== HOÀN TẤT KIỂM THỬ ===");
-
-        // Đóng kết nối
         try {
+            AiAnalysisService service = new AiAnalysisService(client, config, codeProvider, dao);
+            AiRunSummary summary = service.analyzeSubmission(submissionId);
+            System.out.println("AiRunSummary submissionId=" + submissionId + ": " + summary);
+        } finally {
             dao.closeConnection();
-        } catch (Exception ignored) {
         }
     }
 }

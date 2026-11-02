@@ -24,6 +24,10 @@ public class AiConfig {
         this.extractedRoot = readConfig("AI_EXTRACTED_ROOT", "");
     }
 
+    public static AiConfig fromEnv() {
+        return new AiConfig();
+    }
+
     /**
      * Đọc giá trị cấu hình từ System.getenv, nếu null thì fallback sang System.getProperty.
      *

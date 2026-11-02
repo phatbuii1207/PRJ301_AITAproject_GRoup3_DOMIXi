@@ -4,8 +4,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Đọc mã nguồn từ file đã giải nén trên đĩa dưới thư mục:
@@ -33,15 +38,51 @@ public class FileMethodCodeProvider implements MethodCodeProvider {
             return "";
         }
 
-        // Thư mục gốc của bài nộp: {extractedRoot}/{submissionId}/
-        File rootDir = new File(extractedRoot, String.valueOf(submissionId));
+        Path submissionRoot;
+        Path requestedPath;
+        Path requestedRelativePath;
+        try {
+            requestedRelativePath = Paths.get(fileName.trim());
+            if (requestedRelativePath.isAbsolute() || requestedRelativePath.getRoot() != null
+                    || fileName.trim().matches("^[A-Za-z]:.*")) {
+                System.err.println("[FileMethodCodeProvider] Từ chối đường dẫn tuyệt đối.");
+                return "";
+            }
+            for (Path segment : requestedRelativePath) {
+                if ("..".equals(segment.toString())) {
+                    System.err.println("[FileMethodCodeProvider] Từ chối đường dẫn chứa '..'.");
+                    return "";
+                }
+            }
+
+            submissionRoot = Paths.get(extractedRoot).toAbsolutePath().normalize()
+                    .resolve(String.valueOf(submissionId)).normalize();
+            requestedPath = submissionRoot.resolve(requestedRelativePath).normalize();
+            if (!requestedPath.startsWith(submissionRoot)) {
+                System.err.println("[FileMethodCodeProvider] Từ chối đường dẫn nằm ngoài thư mục bài nộp.");
+                return "";
+            }
+        } catch (RuntimeException e) {
+            System.err.println("[FileMethodCodeProvider] Đường dẫn file không hợp lệ.");
+            return "";
+        }
+
+        File rootDir = submissionRoot.toFile();
         if (!rootDir.exists() || !rootDir.isDirectory()) {
             System.err.println("[FileMethodCodeProvider] Không tìm thấy thư mục: " + rootDir.getAbsolutePath());
             return "";
         }
 
-        // Tìm đệ quy file theo tên
-        File targetFile = findFileRecursive(rootDir, fileName.trim());
+        Path canonicalRoot;
+        try {
+            canonicalRoot = rootDir.getCanonicalFile().toPath();
+        } catch (IOException e) {
+            System.err.println("[FileMethodCodeProvider] Không thể xác thực thư mục bài nộp: " + e.getMessage());
+            return "";
+        }
+
+        File targetFile = findSafeFile(requestedPath.toFile(), rootDir, requestedRelativePath,
+                canonicalRoot);
         if (targetFile == null) {
             System.err.println("[FileMethodCodeProvider] Không tìm thấy file '" + fileName + "' trong " + rootDir.getAbsolutePath());
             return "";
@@ -54,13 +95,40 @@ public class FileMethodCodeProvider implements MethodCodeProvider {
      * Tìm file theo tên (chính xác) đệ quy trong thư mục dir.
      * Không dùng java.nio.Files.walk, tương thích Java 1.8.
      */
-    private File findFileRecursive(File dir, String targetName) {
+    private File findSafeFile(File requestedFile, File rootDir, Path requestedRelativePath, Path canonicalRoot) {
+        if (requestedFile.isFile() && isWithinRoot(requestedFile, canonicalRoot)) {
+            return requestedFile;
+        }
+        Path fileName = requestedRelativePath.getFileName();
+        if (fileName == null) {
+            return null;
+        }
+        return findFileRecursive(rootDir, fileName.toString(), canonicalRoot, new HashSet<String>());
+    }
+
+    private File findFileRecursive(File dir, String targetName, Path canonicalRoot, Set<String> visited) {
+        if (!isWithinRoot(dir, canonicalRoot)) {
+            return null;
+        }
+        String canonicalDir;
+        try {
+            canonicalDir = dir.getCanonicalPath();
+        } catch (IOException e) {
+            return null;
+        }
+        if (!visited.add(canonicalDir)) {
+            return null;
+        }
+
         File[] entries = dir.listFiles();
         if (entries == null) {
             return null;
         }
         List<File> subdirs = new ArrayList<File>();
         for (File entry : entries) {
+            if (!isWithinRoot(entry, canonicalRoot)) {
+                continue;
+            }
             if (entry.isFile() && entry.getName().equals(targetName)) {
                 return entry;
             }
@@ -70,12 +138,20 @@ public class FileMethodCodeProvider implements MethodCodeProvider {
         }
         // Duyệt thư mục con sau (BFS-style: file trước, thư mục con sau)
         for (File subdir : subdirs) {
-            File found = findFileRecursive(subdir, targetName);
+            File found = findFileRecursive(subdir, targetName, canonicalRoot, visited);
             if (found != null) {
                 return found;
             }
         }
         return null;
+    }
+
+    private boolean isWithinRoot(File file, Path canonicalRoot) {
+        try {
+            return file.getCanonicalFile().toPath().startsWith(canonicalRoot);
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     /**
