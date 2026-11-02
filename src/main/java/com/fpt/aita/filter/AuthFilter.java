@@ -18,6 +18,7 @@ import javax.servlet.http.HttpSession;
  * - Chặn truy cập trái phép trực tiếp vào các file .jsp từ trình duyệt
  * - Kiểm tra phiên đăng nhập (Session) trên toàn bộ tài nguyên được bảo vệ
  * - Phân quyền vai trò Giảng viên (Lecturer) và Sinh viên (Student)
+ * - Bảo vệ đường dẫn Báo cáo phân tích (/report)
  */
 @WebFilter(filterName = "AuthFilter", urlPatterns = {"/*"})
 public class AuthFilter implements Filter {
@@ -58,7 +59,7 @@ public class AuthFilter implements Filter {
                 return;
             }
 
-            // Mọi file .jsp nghiệp vụ khác (home.jsp, course_detail.jsp, assignments.jsp, student_assignments.jsp, ...)
+            // Mọi file .jsp nghiệp vụ khác (home.jsp, course_detail.jsp, assignments.jsp, student_assignments.jsp, analysis_report.jsp ...)
             // Bị chặn triệt để khi gõ thẳng URL từ trình duyệt
             if (currentUser == null) {
                 response.sendRedirect(contextPath + "/login");
@@ -94,6 +95,13 @@ public class AuthFilter implements Filter {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thực hiện chức năng quản trị của Giảng viên!");
                 return;
             }
+        }
+
+        // 6. BẢO VỆ ĐƯỜNG DẪN BÁO CÁO PHÂN TÍCH (/report)
+        // User phải đăng nhập (đã kiểm tra ở Bước 4). Phân quyền chi tiết (SV chỉ xem bài mình, GV chỉ xem lớp mình)
+        // được kiểm tra nghiêm ngặt tại AnalysisReportServlet.
+        if (path.equals("/report")) {
+            // Tiếp tục chuỗi Filter
         }
 
         // Hợp lệ -> Tiếp tục chuỗi Filter

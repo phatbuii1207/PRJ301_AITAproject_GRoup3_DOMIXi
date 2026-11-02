@@ -477,6 +477,76 @@ INSERT INTO [dbo].[ANALYSIS_REPORTS] ([submission_id], [quality_score], [total_i
 GO
 
 --------------------------------------------------------------------------------
+-- 2.13. MOCK DATA BỔ SUNG CHO BÁO CÁO PHÂN TÍCH & AI CODE DIFF (TESTING DEMO)
+--------------------------------------------------------------------------------
+-- Thêm Đề xuất Tối ưu hóa AI cho BubbleSortService (method_id 1 - Submission 1)
+IF NOT EXISTS (SELECT 1 FROM [dbo].[AI_OPTIMIZATIONS] WHERE [method_id] = 1)
+BEGIN
+    INSERT INTO [dbo].[AI_OPTIMIZATIONS] ([method_id], [original_code], [optimized_code], [explanation], [created_at])
+    VALUES (
+        1,
+        N'public void sortAscending(int[] arr) {
+    int n = arr.length;
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}',
+        N'public void sortAscending(int[] arr) {
+    if (arr == null || arr.length <= 1) return;
+    // Tối ưu thuật toán: Sử dụng Dual-Pivot Quicksort độ phức tạp O(N log N)
+    Arrays.sort(arr);
+}',
+        N'AI đã phát hiện thuật toán Bubble Sort với 2 vòng for lồng nhau dẫn đến độ phức tạp O(N^2). Việc chuyển sang Dual-Pivot Quicksort giúp giảm độ phức tạp xuống O(N log N), tăng tốc độ xử lý hơn 150 lần.',
+        GETDATE()
+    );
+END
+
+-- Thêm Đề xuất Tối ưu hóa AI cho DataMatrixProcessor (method_id 4 - Submission 2)
+IF NOT EXISTS (SELECT 1 FROM [dbo].[AI_OPTIMIZATIONS] WHERE [method_id] = 4)
+BEGIN
+    INSERT INTO [dbo].[AI_OPTIMIZATIONS] ([method_id], [original_code], [optimized_code], [explanation], [created_at])
+    VALUES (
+        4,
+        N'public int[][] calculateMatrixMultiplication(int[][] a, int[][] b) {
+    int n = a.length;
+    int[][] c = new int[n][n];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            c[i][j] = 0;
+            for (int k = 0; k < n; k++) {
+                c[i][j] += a[i][k] * b[k][j];
+            }
+        }
+    }
+    return c;
+}',
+        N'public int[][] calculateMatrixMultiplication(int[][] a, int[][] b) {
+    int n = a.length;
+    int[][] c = new int[n][n];
+    // Tối ưu hóa Cache Locality (truy cập bộ nhớ đệm tuần tự): Đổi thứ tự vòng for i-k-j
+    for (int i = 0; i < n; i++) {
+        for (int k = 0; k < n; k++) {
+            int r = a[i][k];
+            for (int j = 0; j < n; j++) {
+                c[i][j] += r * b[k][j];
+            }
+        }
+    }
+    return c;
+}',
+        N'Thuật toán nhân ma trận ban đầu duyệt i-j-k gây lỗi Cache Miss nghiêm trọng trong kiến trúc CPU hiện đại. Đổi thứ tự sang i-k-j tận dụng tối đa CPU L1/L2 Cache Line, tăng hiệu năng gấp 10-20 lần.',
+        GETDATE()
+    );
+END
+GO
+
+--------------------------------------------------------------------------------
 -- 3. KIỂM TRA TOÀN VẸN DỮ LIỆU SAU KHI TẠO
 --------------------------------------------------------------------------------
 SELECT 'CLASSES' AS [TableName], COUNT(*) AS [TotalRows] FROM [dbo].[CLASSES]

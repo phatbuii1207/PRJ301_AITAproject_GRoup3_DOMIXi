@@ -282,14 +282,16 @@
                     <thead>
                         <tr>
                             <th style="width: 70px;">Mã Đề</th>
-                            <th style="width: 220px;">Tên Bài Tập</th>
-                            <th style="width: 170px;">Giảng Viên Giao</th>
+                            <th style="width: 200px;">Tên Bài Tập</th>
+                            <th style="width: 160px;">Giảng Viên Giao</th>
                             <th>Yêu Cầu / Mô Tả</th>
-                            <th style="width: 140px;">Thao Tác</th>
+                            <th style="width: 160px;">Báo Cáo Phân Tích</th>
+                            <th style="width: 130px;">Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <c:forEach items="${assignmentList}" var="item">
+                            <c:set var="subItem" value="${submissionMap[item.assignmentId]}" />
                             <tr>
                                 <td><b>#${item.assignmentId}</b></td>
                                 <td>
@@ -302,8 +304,32 @@
                                     <div class="desc-text">${item.description}</div>
                                 </td>
                                 <td>
+                                    <c:choose>
+                                        <c:when test="${not empty subItem}">
+                                            <div style="font-size:11.5px; color:#10b981; font-weight:600; margin-bottom:4px;">
+                                                ✅ ${subItem.fileNameOnly}
+                                            </div>
+                                            <c:choose>
+                                                <c:when test="${reportMap[subItem.submissionId]}">
+                                                    <a href="report?submissionId=${subItem.submissionId}" class="btn-submit-work" style="background:#0284c7; text-decoration:none; padding:5px 10px; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+                                                        📊 Xem báo cáo
+                                                    </a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <a href="report?submissionId=${subItem.submissionId}" class="btn-submit-work" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); text-decoration:none; padding:5px 10px; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
+                                                        ⏳ Đang chấm
+                                                    </a>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span style="color:#64748b; font-size:12px;">⏳ Chưa nộp bài</span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </td>
+                                <td>
                                     <button type="button" class="btn-submit-work" onclick="openSubmitModal(${item.assignmentId}, '${item.title}')">
-                                        📤 Nộp bài
+                                        📤 ${not empty subItem ? 'Nộp lại' : 'Nộp bài'}
                                     </button>
                                 </td>
                             </tr>
