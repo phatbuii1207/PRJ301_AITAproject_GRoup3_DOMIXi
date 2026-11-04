@@ -217,7 +217,8 @@ public class AiAnalysisServiceTest {
             AiAnalysisService service = new AiAnalysisService(normalClient, config, provider, dao);
 
             AiRunSummary summary = service.analyzeSubmission(2);
-            if (summary != null && summary.getAnalyzed() == 1 && summary.getFromCache() == 1) {
+            if (summary != null && summary.getAnalyzed() == 1 && summary.getFromCache() == 1
+                    && "O(N)".equals(dao.findByOriginalCode(sharedCode).getComplexityAfter())) {
                 System.out.println("PASSED (analyzed=1, fromCache=1, client gọi " + normalClient.getCallCount() + " lần)");
                 passed++;
             } else {

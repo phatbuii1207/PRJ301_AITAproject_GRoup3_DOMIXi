@@ -18,6 +18,7 @@ Bộ chấm test case đã nối với sandbox: quản lý test công khai/ẩn,
 điểm theo trọng số trên thang 10 và lưu kết quả. Chạy migration
 `database/migrations/001_test_case_grading.sql`, rồi xem
 [hướng dẫn chấm điểm](docs/TEST_CASE_GRADING.md). Module chấm này không cần API key.
+Database cũ cần thêm `database/migrations/002_ai_new_complexity.sql` cho cột kết quả tối ưu AI.
 
 Bài ZIP Java được biên dịch/chạy trong container Java 8 non-root, không có mạng ra ngoài,
 giới hạn 128 MiB RAM, 0.5 CPU và 5 giây. Build image trước khi dùng:

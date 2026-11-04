@@ -139,6 +139,7 @@ public class AiAnalysisService {
                             cached.getOptimizedCode(),
                             cached.getExplanation()
                     );
+                    reused.setComplexityAfter(cached.getComplexityAfter());
                     reused.setCreatedAt(new Timestamp(System.currentTimeMillis()));
                     dao.insertOptimization(reused);
                     updateExplanationForIssues(method.getIssues(), cached.getExplanation());

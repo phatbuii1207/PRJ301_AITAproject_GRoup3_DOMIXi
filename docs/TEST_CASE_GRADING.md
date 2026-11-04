@@ -8,6 +8,8 @@ Bộ chấm hoạt động độc lập với API key/AI. Java của sinh viên 
 1. Trong đúng database SQL Server/Azure SQL của ứng dụng, chạy
    `database/migrations/001_test_case_grading.sql` sau khi đã có schema AITA gốc.
    Script chỉ thêm 4 bảng, có transaction và có thể chạy lại; không xóa dữ liệu cũ.
+   Chạy thêm `database/migrations/002_ai_new_complexity.sql` cho database cũ để
+   tương thích cột new_complexity mà module AI của nhóm đang sử dụng.
 2. Có sẵn image: `docker build -t aita-sandbox:java8 docker/sandbox`.
 3. Build `mvn verify -Psandbox-it` và deploy WAR mới lên Tomcat 9.
 

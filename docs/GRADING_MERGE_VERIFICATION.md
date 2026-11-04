@@ -1,6 +1,6 @@
 # Kiểm chứng tích hợp trước khi push
 
-Đã ghép bộ chấm test case với 13 commit AST/AI mới từ origin/main.
+Đã ghép bộ chấm test case với 19 commit AST/AI mới từ origin/main.
 Giữ pipeline chấm chức năng → lưu điểm → phân tích AST → tối ưu AI.
 Lỗi AST/AI không ghi đè điểm chức năng. API AI chạy ở backend, không ở sandbox.
 Chỉ một GradingQueueListener quản lý vòng đời worker; giữ API enqueue kèm đường dẫn.
@@ -23,3 +23,6 @@ và báo cáo JUnit trong target/surefire-reports, target/failsafe-reports.
 
 Local .env được giữ trên máy và bị gitignore theo cấu hình mới của nhóm.
 Không đưa build artifacts, upload hay credential mới vào commit.
+
+Cập nhật AI mới nhất: thêm migration 002 cho new_complexity và giữ giá trị này
+khi tái sử dụng cache. Test cache kiểm tra metadata O(N) không bị mất.
