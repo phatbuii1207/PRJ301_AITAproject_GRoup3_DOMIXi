@@ -341,7 +341,7 @@ public class CourseDetailServlet extends HttpServlet {
                             }
                         } catch (Exception ignored) {}
 
-                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL SQL Server
+                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL SQL Server với trạng thái Pending (Đưa vào Hàng đợi)
                         Submission sub = new Submission();
                         sub.setStudentId(currentUser.getUserId());
                         sub.setAssignmentId(assignmentId);
@@ -349,15 +349,18 @@ public class CourseDetailServlet extends HttpServlet {
                         sub.setSha256Hash(sha256);
                         sub.setFileSize((int) fileSize);
                         sub.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
-                        sub.setStatus("Completed");
+                        sub.setStatus("Pending");
 
                         boolean ok = submissionDAO.insertSubmission(sub);
                         if (ok) {
+                            // 6. Đưa bài nộp vào Hàng đợi chấm bài bất đồng bộ (Grading Queue)
+                            com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId());
+
                             session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + currentUser.getFullName() 
                                     + "</b> đã nộp bài thành công tệp <b>" + originalFileName + "</b> (" 
                                     + sub.getFormattedFileSize() + ")!<br/>"
                                     + "• Mã băm SHA-256: <code style='font-size:12px; font-weight:600;'>" + sha256 + "</code><br/>"
-                                    + "• Đã ghi nhận vào Cơ sở dữ liệu SQL Server (bảng <code>SUBMISSIONS</code>).");
+                                    + "• Trạng thái: ⏳ <b>Đã đưa vào Hàng đợi chấm bài ngầm (Grading Queue)</b>.");
                         } else {
                             session.setAttribute("flashError", "Lỗi CSDL: Không thể lưu thông tin bài nộp vào database.");
                         }
