@@ -1,5 +1,6 @@
 package com.fpt.aita.controller;
 
+import com.fpt.aita.dal.AnalysisReportDAO;
 import com.fpt.aita.dal.AssignmentDAO;
 import com.fpt.aita.dal.CourseDAO;
 import com.fpt.aita.dal.SubmissionDAO;
@@ -49,6 +50,7 @@ public class CourseDetailServlet extends HttpServlet {
     private SubmissionDAO submissionDAO = new SubmissionDAO();
     private CourseDAO courseDAO = new CourseDAO();
     private UserDAO userDAO = new UserDAO();
+    private AnalysisReportDAO reportDAO = new AnalysisReportDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -120,6 +122,10 @@ public class CourseDetailServlet extends HttpServlet {
             Map<Integer, Submission> submissionMap = submissionDAO.getStudentSubmissionsForCourse(currentUser.getUserId(), courseId);
             request.setAttribute("submissionMap", submissionMap);
         }
+
+        // 7. Nap trang thai Bao cao danh gia (Analysis Report) cho cac bai nop
+        Map<Integer, Boolean> reportMap = reportDAO.getReportsStatusMapByCourse(courseId);
+        request.setAttribute("reportMap", reportMap);
 
         // 7. Chuyển tiếp sang view hiển thị chi tiết môn học
         request.getRequestDispatcher("course_detail.jsp").forward(request, response);

@@ -550,20 +550,20 @@
         <!-- PHÂN NHÁNH 1: GIẢNG VIÊN (LECTURER)                            -->
         <!-- ============================================================= -->
         <c:if test="${sessionScope.currentUser.role == 'Lecturer'}">
-            <div class="card">
+            <div class="card" id="createAssignmentCard">
                 <h3><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg> Giao Bài Tập Mới Cho Môn Học</h3>
-                <form action="course" method="POST">
+                <form action="course" method="POST" accept-charset="UTF-8">
                     <input type="hidden" name="action" value="create_assignment" />
                     <input type="hidden" name="courseId" value="${courseId}" />
                     
                     <label>Tiêu đề bài tập:</label>
-                    <input type="text" name="title" placeholder="vd: Lab 1: AST Code Complexity" required />
+                    <input type="text" name="title" id="createTitleInput" placeholder="vd: Lab 1: AST Code Complexity" required />
                     
                     <label>Mô tả & Yêu cầu:</label>
-                    <textarea name="description" rows="3" placeholder="Nhập yêu cầu bài tập..."></textarea>
+                    <textarea name="description" id="createDescriptionInput" rows="3" placeholder="Nhập yêu cầu bài tập..."></textarea>
                     
                     <label>Hạn nộp (Deadline):</label>
-                    <input type="datetime-local" name="deadline" />
+                    <input type="datetime-local" name="deadline" id="createDeadlineInput" />
                     
                     <button type="submit" class="btn btn-primary">Giao Bài Tập</button>
                 </form>
@@ -644,6 +644,20 @@
                                                     <div style="font-size:11px; color:#0284c7; margin-top:3px;" title="Mã băm SHA-256 toàn vẹn: ${sub.sha256Hash}">
                                                         SHA: <code>${sub.sha256Hash.substring(0, 14)}...</code>
                                                     </div>
+                                                    <div style="margin-top: 6px;">
+                                                        <c:choose>
+                                                            <c:when test="${reportMap[sub.submissionId]}">
+                                                                <a href="report?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:#0284c7; color:#fff; border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Xem báo cáo chất lượng mã nguồn">
+                                                                    📊 Xem báo cáo
+                                                                </a>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <a href="report?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Bài nộp đang trong hàng đợi chấm">
+                                                                    ⏳ Đang chấm
+                                                                </a>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
                                                 </c:when>
                                                 <c:when test="${a.expired}">
                                                     <span class="badge-expired">🔒 Quá hạn</span>
@@ -672,6 +686,15 @@
                                                 Sửa
                                             </button>
 
+                                            <button type="button" class="btn btn-secondary btn-clone-assignment"
+                                                    data-title="${a.title}"
+                                                    data-description="${a.description}"
+                                                    style="margin-right: 6px; background-color: #0f766e; color: #fff; border-color: #0f766e;"
+                                                    title="Tạo bài tập mới từ bài này">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                                                Nhân bản
+                                            </button>
+
                                             <form action="course" method="POST" style="display:inline;" onsubmit="return confirm('Xác nhận xóa bài tập này?')">
                                                 <input type="hidden" name="action" value="delete_assignment" />
                                                 <input type="hidden" name="assignmentId" value="${a.assignmentId}" />
@@ -689,10 +712,22 @@
                                                     </button>
                                                 </c:when>
                                                 <c:when test="${not empty sub}">
-                                                    <button type="button" class="btn btn-secondary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">
+                                                    <button type="button" class="btn btn-secondary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')" style="margin-right: 4px;">
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                                         Sửa / Nộp lại
                                                     </button>
+                                                    <c:choose>
+                                                        <c:when test="${reportMap[sub.submissionId]}">
+                                                            <a href="report?submissionId=${sub.submissionId}" class="btn btn-primary" style="background:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Xem báo cáo phân tích chi tiết">
+                                                                📊 Báo cáo
+                                                            </a>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <a href="report?submissionId=${sub.submissionId}" class="btn btn-secondary" style="border:1px solid #f59e0b; color:#fbbf24; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Hệ thống đang chấm bài">
+                                                                ⏳ Đang chấm
+                                                            </a>
+                                                        </c:otherwise>
+                                                    </c:choose>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <button type="button" class="btn btn-primary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">
@@ -945,6 +980,28 @@
             document.getElementById('editAssignmentModal').style.display = 'flex';
         }
 
+        function cloneAssignment(title, desc) {
+            var titleInput = document.getElementById('createTitleInput');
+            var descInput = document.getElementById('createDescriptionInput');
+            var card = document.getElementById('createAssignmentCard');
+            if (titleInput && descInput) {
+                var prefix = '[Bản sao] ';
+                titleInput.value = (title && title.indexOf(prefix) === 0) ? title : (prefix + (title || ''));
+                descInput.value = desc || '';
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+                    card.style.borderColor = '#0f766e';
+                    card.style.boxShadow = '0 0 0 3px rgba(15, 118, 110, 0.35)';
+                    setTimeout(function() {
+                        card.style.borderColor = '';
+                        card.style.boxShadow = '';
+                    }, 2000);
+                }
+                titleInput.focus();
+            }
+        }
+
         function closeEditAssignmentModal() {
             document.getElementById('editAssignmentModal').style.display = 'none';
         }
@@ -956,6 +1013,15 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.btn-clone-assignment').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    cloneAssignment(
+                        this.dataset.title,
+                        this.dataset.description
+                    );
+                });
+            });
+
             document.querySelectorAll('.btn-edit-assignment').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     openEditAssignmentModal(
@@ -1035,7 +1101,7 @@
                 <button type="button" class="btn-close" onclick="closeEditAssignmentModal()">&times;</button>
             </div>
             
-            <form action="course" method="POST">
+            <form action="course" method="POST" accept-charset="UTF-8">
                 <input type="hidden" name="action" value="edit_assignment" />
                 <input type="hidden" name="courseId" value="${courseId}" />
                 <input type="hidden" name="assignmentId" id="editAssignmentId" value="" />
@@ -1134,6 +1200,18 @@
                                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                                     Tải về
                                                 </a>
+                                                <c:choose>
+                                                    <c:when test="${reportMap[sub.submissionId]}">
+                                                        <a href="report?submissionId=${sub.submissionId}" class="btn-download" style="background:#0284c7; color:#fff; border-color:#0284c7; margin-left:5px;" title="Xem báo cáo chất lượng mã nguồn">
+                                                            📊 Báo cáo
+                                                        </a>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <a href="report?submissionId=${sub.submissionId}" class="btn-download" style="background:rgba(245,158,11,0.15); color:#fbbf24; border-color:rgba(245,158,11,0.4); margin-left:5px;" title="Bài nộp đang trong hàng đợi chấm">
+                                                            ⏳ Đang chấm
+                                                        </a>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </td>
                                         </tr>
                                     </c:forEach>
