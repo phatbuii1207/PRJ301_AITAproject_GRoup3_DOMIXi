@@ -215,7 +215,7 @@
                 </div>
             </c:if>
 
-            <form action="register" method="POST">
+            <form action="register" method="POST" accept-charset="UTF-8">
                 <div class="form-group">
                     <label>Tên đăng nhập (Mã sinh viên):</label>
                     <input type="text" name="username" class="form-control" value="${draftUsername}" placeholder="vd: he180005" required autocomplete="username" />

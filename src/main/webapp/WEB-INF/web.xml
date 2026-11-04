@@ -3,6 +3,26 @@
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
    version="4.0">
+    <!-- 1. Bộ lọc mã hóa Tiếng Việt UTF-8 (Bắt buộc chạy ĐẦU TIÊN để chống lỗi font) -->
+    <filter>
+        <filter-name>EncodingFilter</filter-name>
+        <filter-class>com.fpt.aita.filter.EncodingFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>EncodingFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <!-- 2. Bộ lọc xác thực và phân quyền (Chạy sau EncodingFilter) -->
+    <filter>
+        <filter-name>AuthFilter</filter-name>
+        <filter-class>com.fpt.aita.filter.AuthFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <session-config>
         <session-timeout>
             30
