@@ -8,7 +8,9 @@ import com.fpt.aita.dal.UserDAO;
 import com.fpt.aita.model.Assignment;
 import com.fpt.aita.model.Course;
 import com.fpt.aita.model.Submission;
+import com.fpt.aita.model.SandboxResult;
 import com.fpt.aita.model.User;
+import com.fpt.aita.service.DockerSandboxService;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -51,6 +54,7 @@ public class CourseDetailServlet extends HttpServlet {
     private CourseDAO courseDAO = new CourseDAO();
     private UserDAO userDAO = new UserDAO();
     private AnalysisReportDAO reportDAO = new AnalysisReportDAO();
+    private final DockerSandboxService sandboxService = new DockerSandboxService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -271,6 +275,7 @@ public class CourseDetailServlet extends HttpServlet {
         // =====================================================================
         else if ("Student".equalsIgnoreCase(currentUser.getRole())) {
             if ("submit_assignment".equals(action)) {
+                session.removeAttribute("sandboxSubmissionResult");
                 String assignmentIdStr = request.getParameter("assignmentId");
                 int assignmentId = 0;
                 try {
@@ -355,18 +360,28 @@ public class CourseDetailServlet extends HttpServlet {
                         sub.setSha256Hash(sha256);
                         sub.setFileSize((int) fileSize);
                         sub.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
-                        sub.setStatus("Pending");
+                        // ZIP execution is isolated from Tomcat; Docker failure never falls back to host Java.
+                        SandboxResult sandbox = null;
+                        if (originalFileName.toLowerCase(Locale.ROOT).endsWith(".zip")) {
+                            sandbox = sandboxService.execute(destFile.toPath());
+                        }
+                        boolean pending = sandbox != null && (sandbox.getStatus() == SandboxResult.Status.SANDBOX_UNAVAILABLE
+                                || sandbox.getStatus() == SandboxResult.Status.SANDBOX_BUSY
+                                || sandbox.getStatus() == SandboxResult.Status.INTERNAL_ERROR);
+                        sub.setStatus(sandbox == null || sandbox.isSuccess() ? "Completed" : pending ? "Pending" : "Failed");
 
                         boolean ok = submissionDAO.insertSubmission(sub);
                         if (ok) {
                             // 6. Đưa bài nộp vào Hàng đợi chấm bài bất đồng bộ (Grading Queue)
                             com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId());
 
-                            session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + currentUser.getFullName() 
-                                    + "</b> đã nộp bài thành công tệp <b>" + originalFileName + "</b> (" 
+                            if (sandbox != null) session.setAttribute("sandboxSubmissionResult", sandbox);
+                            session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + escapeHtml(currentUser.getFullName()) 
+                                    + "</b> đã nộp bài thành công tệp <b>" + escapeHtml(originalFileName) + "</b> (" 
                                     + sub.getFormattedFileSize() + ")!<br/>"
                                     + "• Mã băm SHA-256: <code style='font-size:12px; font-weight:600;'>" + sha256 + "</code><br/>"
-                                    + "• Trạng thái: ⏳ <b>Đã đưa vào Hàng đợi chấm bài ngầm (Grading Queue)</b>.");
+                                    + "• Trạng thái: ⏳ <b>Đã đưa vào Hàng đợi chấm bài ngầm (Grading Queue)</b>."
+                                    + (sandbox == null ? "<br/>• Tệp này chưa chạy sandbox; tự chạy áp dụng cho ZIP chứa Java." : ""));
                         } else {
                             session.setAttribute("flashError", "Lỗi CSDL: Không thể lưu thông tin bài nộp vào database.");
                         }
@@ -385,6 +400,12 @@ public class CourseDetailServlet extends HttpServlet {
     }
 
     // Helper: Cung cấp thông tin môn học (ưu tiên truy vấn trực tiếp từ bảng CLASSES)
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
     private Map<String, Object> getCourseInfo(int courseId) {
         Course courseObj = courseDAO.getCourseById(courseId);
         if (courseObj != null) {
