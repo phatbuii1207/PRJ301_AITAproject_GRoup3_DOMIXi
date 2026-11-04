@@ -364,21 +364,28 @@ public class CourseDetailServlet extends HttpServlet {
                         sub.setFileSize((int) fileSize);
                         sub.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
                         boolean zipSubmission = originalFileName.toLowerCase(Locale.ROOT).endsWith(".zip");
-                        sub.setStatus(zipSubmission ? "Pending" : "Completed");
+                        boolean javaSubmission = originalFileName.toLowerCase(Locale.ROOT).endsWith(".java");
+                        boolean pipelineSubmission = zipSubmission || javaSubmission;
+                        sub.setStatus(pipelineSubmission ? "Pending" : "Completed");
 
                         boolean ok = submissionDAO.insertSubmission(sub);
                         if (ok) {
-                            boolean queued = zipSubmission && com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId());
-                            if (zipSubmission && !queued) submissionDAO.updateSubmissionStatus(sub.getSubmissionId(), "Failed");
+                            boolean queued = pipelineSubmission && com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId(), destFile.getAbsolutePath());
+                            if (pipelineSubmission && !queued) submissionDAO.updateSubmissionStatus(sub.getSubmissionId(), "Failed");
+
                             session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + escapeHtml(currentUser.getFullName()) 
                                     + "</b> đã nộp bài thành công tệp <b>" + escapeHtml(originalFileName) + "</b> (" 
                                     + sub.getFormattedFileSize() + ")!<br/>"
                                     + "• Mã băm SHA-256: <code style='font-size:12px; font-weight:600;'>" + sha256 + "</code><br/>"
-                                    + (queued ? "• Đã đưa vào hàng đợi chấm test case."
-                                    : zipSubmission ? "• Chưa đưa được vào hàng đợi. Giảng viên có thể chấm lại tại trang kết quả."
+                                    + (queued ? "• Đã đưa vào hàng đợi chấm test case/phân tích AST và AI."
+                                    : pipelineSubmission ? "• Chưa đưa được vào hàng đợi. Giảng viên có thể chấm lại tại trang kết quả."
                                     : "• Tệp đã lưu; bộ chấm tự động chỉ nhận ZIP Java."));
                             if (zipSubmission) {
                                 response.sendRedirect("grading-result?submissionId=" + sub.getSubmissionId());
+                                return;
+                            }
+                            if (javaSubmission && queued) {
+                                response.sendRedirect("report?submissionId=" + sub.getSubmissionId());
                                 return;
                             }
                         } else {

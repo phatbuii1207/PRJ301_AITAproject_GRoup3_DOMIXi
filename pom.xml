@@ -45,6 +45,20 @@
             <artifactId>jstl</artifactId>
             <version>1.2</version>
         </dependency>
+
+        <!-- 4. Thư viện Gson xử lý JSON (Java 8 tương thích) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
+        <!-- 5. Thư viện AST Parser JavaParser phân tích mã nguồn Java tĩnh -->
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-core</artifactId>
+            <version>3.25.8</version>
+        </dependency>
     </dependencies>
 
         <build>

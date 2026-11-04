@@ -86,7 +86,11 @@ không nhận trùng ID đang chờ/chấm. Mỗi thao tác DB mở connection r
 Worker lấy barem từ database, kiểm tra đường dẫn ZIP trong upload root và đối chiếu
 SHA-256, sau đó gọi `GradingService`. File bị đổi hoặc không có trên host sẽ không
 được tính điểm. Listener khởi tạo worker theo đường dẫn upload của Tomcat và ngắt
-worker khi ứng dụng dừng. Các trang báo cáo AST/AI hiện có vẫn là báo cáo riêng.
+worker khi ứng dụng dừng. Sau khi lưu điểm test case, worker tiếp tục pipeline
+AST/AI của nhóm qua SubmissionAnalysisService; kết quả nằm trong các trang báo cáo
+AST/AI riêng. Lỗi phân tích bổ sung không ghi đè điểm chức năng đã chấm.
+ZIP được kiểm tra giới hạn trước khi đi qua bộ parser/extractor trên host. File
+`.java` đơn lẻ vẫn đi qua AST/AI và không được gán điểm test case (cần ZIP để chấm).
 
 Bản này tái sử dụng API sandbox đang có: **mỗi test dùng container mới và biên dịch
 lại source**, tránh giữ trạng thái của test trước. Mỗi lần có deadline 5 giây gồm

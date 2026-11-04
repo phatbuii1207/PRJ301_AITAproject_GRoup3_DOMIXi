@@ -5,6 +5,7 @@ import com.fpt.aita.model.GradingConfig;
 import com.fpt.aita.model.GradingReport;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.service.GradingService;
+import com.fpt.aita.service.SubmissionAnalysisService;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -71,6 +72,12 @@ public final class GradingQueueManager {
         }
     }
 
+    /** Compatibility with the team's upload API; supplied paths must stay inside the upload root. */
+    public boolean enqueue(int submissionId, String absolutePath) {
+        if (absolutePath != null && !uploadRoot.equals(java.nio.file.Paths.get(absolutePath).toAbsolutePath().normalize().getParent())) return false;
+        return enqueue(submissionId);
+    }
+
     private void process(int id) {
         try {
             Submission submission; GradingConfig config;
@@ -81,17 +88,27 @@ public final class GradingQueueManager {
                 config = dao.loadConfig(submission.getAssignmentId());
             }
             details.put(id, "Đang chạy test case trong Docker Sandbox...");
+            Path archive = resolveArchive(submission.getFilePath());
+            if (!hash(archive).equalsIgnoreCase(submission.getSha256Hash())) throw new IllegalArgumentException("Submission hash mismatch");
+            boolean zip = archive.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".zip");
             GradingReport report;
-            if (config == null) report = GradingReport.unavailable("NOT_CONFIGURED", "Giảng viên chưa cấu hình test case; chưa tính điểm.");
+            if (!zip) report = GradingReport.unavailable("NOT_APPLICABLE", "File Java đơn được phân tích AST/AI; chấm test case cần nộp ZIP.");
+            else if (config == null) report = GradingReport.unavailable("NOT_CONFIGURED", "Giảng viên chưa cấu hình test case; chưa tính điểm.");
             else {
-                Path archive = resolveArchive(submission.getFilePath());
-                if (!hash(archive).equalsIgnoreCase(submission.getSha256Hash())) {
-                    throw new IllegalArgumentException("Submission hash mismatch");
-                }
                 report = new GradingService().grade(archive, config);
             }
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             try (GradingDAO dao = new GradingDAO()) { dao.saveReport(id, report); }
+            // Optional analysis failures must not replace a valid functional score with GRADING_ERROR.
+            if (!"INVALID_SUBMISSION".equals(report.getVerdict()) && !"GRADING_ERROR".equals(report.getVerdict())) {
+                details.put(id, "Đã xử lý test case; đang phân tích AST và đề xuất AI...");
+                try {
+                    boolean analyzed = new SubmissionAnalysisService().analyze(id, archive);
+                    if (!zip && analyzed) try (GradingDAO dao = new GradingDAO()) { dao.updateStatus(id, "Completed"); }
+                } catch (Exception analysisFailure) {
+                    LOG.warning("Optional AST/AI analysis failed for submission " + id + " (" + analysisFailure.getClass().getSimpleName() + ")");
+                }
+            }
             details.put(id, report.isComplete() ? "Đã chấm " + report.getPassed() + "/" + report.getTotal()
                     + " test; điểm " + report.getScore() + "/10." : report.getMessage());
         } catch (InterruptedException ex) {
@@ -115,7 +132,8 @@ public final class GradingQueueManager {
         String prefix = "/uploads/submissions/";
         if (stored == null || !stored.startsWith(prefix)) throw new IllegalArgumentException("Invalid upload path");
         String name = stored.substring(prefix.length());
-        if (name.isEmpty() || name.contains("/") || name.contains("\\") || !name.toLowerCase(java.util.Locale.ROOT).endsWith(".zip")) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        if (name.isEmpty() || name.contains("/") || name.contains("\\") || !(lower.endsWith(".zip") || lower.endsWith(".java"))) {
             throw new IllegalArgumentException("Invalid archive name");
         }
         Path archive = uploadRoot.resolve(name).normalize();
