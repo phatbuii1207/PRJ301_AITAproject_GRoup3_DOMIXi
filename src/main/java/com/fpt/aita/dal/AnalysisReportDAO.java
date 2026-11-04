@@ -153,7 +153,7 @@ public class AnalysisReportDAO extends DBContext {
         List<AiOptimization> list = new ArrayList<>();
         String sql = "SELECT o.optimization_id, o.method_id, m.method_name, sf.file_name, "
                    + "       o.original_code, o.optimized_code, o.explanation, o.created_at, "
-                   + "       m.estimated_complexity "
+                   + "       m.estimated_complexity, o.new_complexity "
                    + "FROM AI_OPTIMIZATIONS o "
                    + "JOIN METHODS m ON o.method_id = m.method_id "
                    + "JOIN SOURCE_FILES sf ON m.file_id = sf.file_id "
@@ -175,6 +175,8 @@ public class AnalysisReportDAO extends DBContext {
                         rs.getTimestamp("created_at")
                     );
                     opt.setComplexityBefore(rs.getString("estimated_complexity"));
+                    // new_complexity do AI ghi; có thể NULL nếu AI chưa trả về -> JSP hiển thị "—"
+                    opt.setComplexityAfter(rs.getString("new_complexity"));
                     list.add(opt);
                 }
             }

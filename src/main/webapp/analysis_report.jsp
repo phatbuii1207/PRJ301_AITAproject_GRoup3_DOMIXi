@@ -879,7 +879,7 @@
                                 🚀 Phương thức: <span id="displayMethodName"><c:out value="${opt.methodName}"/></span>()
                             </div>
                             <span class="complexity-tag" id="displayComplexity">
-                                Độ phức tạp: <c:out value="${not empty opt.complexityBefore ? opt.complexityBefore : 'O(N^2)'}"/> ➔ <c:out value="${not empty opt.complexityAfter ? opt.complexityAfter : 'O(N)'}"/>
+                                Độ phức tạp: <c:out value="${not empty opt.complexityBefore ? opt.complexityBefore : '—'}"/> ➔ <c:out value="${not empty opt.complexityAfter ? opt.complexityAfter : '—'}"/>
                             </span>
                         </div>
                         <div class="opt-explanation-text" id="displayExplanation">
@@ -908,7 +908,7 @@
                             <div id="optData_${status.index}">
                                 <input type="hidden" class="store-method" value="<c:out value="${op.methodName}"/>" />
                                 <input type="hidden" class="store-file" value="<c:out value="${op.fileName}"/>" />
-                                <input type="hidden" class="store-complexity" value="<c:out value="${not empty op.complexityBefore ? op.complexityBefore : 'O(N^2)'}"/> ➔ <c:out value="${not empty op.complexityAfter ? op.complexityAfter : 'O(N)'}"/>" />
+                                <input type="hidden" class="store-complexity" value="<c:out value="${not empty op.complexityBefore ? op.complexityBefore : '—'}"/> ➔ <c:out value="${not empty op.complexityAfter ? op.complexityAfter : '—'}"/>" />
                                 <textarea class="store-explanation"><c:out value="${op.explanation}"/></textarea>
                                 <textarea class="store-old-code"><c:out value="${op.originalCode}"/></textarea>
                                 <textarea class="store-new-code"><c:out value="${op.optimizedCode}"/></textarea>

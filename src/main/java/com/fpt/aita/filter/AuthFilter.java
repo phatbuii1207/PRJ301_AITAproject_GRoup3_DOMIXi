@@ -97,7 +97,8 @@ public class AuthFilter implements Filter {
         String action = request.getParameter("action");
         if ("Student".equalsIgnoreCase(currentUser.getRole())) {
             // Sinh viên cố tình kích hoạt thao tác quản trị của Giảng viên
-            if ("create_assignment".equals(action) || "delete_assignment".equals(action) || "update_deadline".equals(action)) {
+            if ("create_assignment".equals(action) || "delete_assignment".equals(action) 
+                    || "update_deadline".equals(action) || "edit_assignment".equals(action)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền thực hiện chức năng quản trị của Giảng viên!");
                 return;
             }

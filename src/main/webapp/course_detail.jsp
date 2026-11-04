@@ -273,6 +273,33 @@
             display: inline-block;
         }
 
+        .badge-processing {
+            background: #e0e7ff;
+            color: #4338ca;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            animation: pulse-badge 1.5s infinite;
+        }
+
+        @keyframes pulse-badge {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .badge-failed {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
         .badge-expired {
             background: #fee2e2;
             color: #991b1b;
@@ -508,6 +535,16 @@
             <c:remove var="flashError" scope="session" />
         </c:if>
 
+        <c:if test="${not empty sessionScope.sandboxSubmissionResult}">
+            <div class="flash-success" role="status">
+                <strong>Docker Sandbox: <c:out value="${sessionScope.sandboxSubmissionResult.status}" /></strong>
+                (<c:out value="${sessionScope.sandboxSubmissionResult.executionTimeMs}" /> ms)
+                <p>SUCCESS chỉ xác nhận biên dịch và chạy thành công, chưa chấm đúng/sai đáp án.</p>
+                <pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;"><c:out value="${sessionScope.sandboxSubmissionResult.output}" /></pre>
+            </div>
+            <c:remove var="sandboxSubmissionResult" scope="session" />
+        </c:if>
+
         <!-- COURSE INFO HEADER -->
         <div class="course-header">
             <div class="course-badge">${course.code}</div>
@@ -594,7 +631,20 @@
                                         <td>
                                             <c:choose>
                                                 <c:when test="${not empty sub}">
-                                                    <span class="badge-submitted">✅ Đã nộp bài</span>
+                                                    <c:choose>
+                                                        <c:when test="${sub.status == 'Processing'}">
+                                                            <span class="badge-processing" id="sub-status-${sub.submissionId}">🔄 Đang chấm bài...</span>
+                                                        </c:when>
+                                                        <c:when test="${sub.status == 'Pending'}">
+                                                            <span class="badge-pending" id="sub-status-${sub.submissionId}">⏳ Trong hàng đợi chấm</span>
+                                                        </c:when>
+                                                        <c:when test="${sub.status == 'Failed'}">
+                                                            <span class="badge-failed" id="sub-status-${sub.submissionId}">❌ Chấm thất bại</span>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="badge-submitted" id="sub-status-${sub.submissionId}">✅ Đã chấm xong</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
                                                     <c:if test="${a.expired}">
                                                         <span class="badge-expired" style="margin-left:4px;">🔒 Khóa</span>
                                                     </c:if>
@@ -744,6 +794,7 @@
                     <div class="drop-title">Kéo & thả file bài làm vào đây</div>
                     <div class="drop-sub">hoặc <span class="drop-browse" onclick="triggerFileInput(event)">chọn tệp từ máy tính</span></div>
                     <div class="drop-types">Hỗ trợ: .zip, .rar, .tar.gz, .java, .pdf, .docx, .sql (Tối đa 50MB)</div>
+                    <div class="drop-types">Sandbox Java: nộp ZIP có Main.java (main class mặc định: Main); giới hạn biên dịch + chạy 5 giây.</div>
                 </div>
 
                 <!-- KHUNG XEM TRƯỚC FILE ĐÃ CHỌN -->
@@ -992,6 +1043,56 @@
                     );
                 });
             });
+
+            // THÀNH VIÊN 3: Tự động Polling kiểm tra trạng thái hàng đợi chấm bài (Queue Status)
+            var activeBadges = document.querySelectorAll('[id^="sub-status-"]');
+            var pendingSubmissions = [];
+            activeBadges.forEach(function(badge) {
+                var text = badge.innerText;
+                if (text.indexOf('Đang') !== -1 || text.indexOf('hàng đợi') !== -1) {
+                    var subId = badge.id.replace('sub-status-', '');
+                    pendingSubmissions.push(subId);
+                }
+            });
+
+            if (pendingSubmissions.length > 0) {
+                var pollInterval = setInterval(function() {
+                    var stillPending = false;
+                    pendingSubmissions.forEach(function(subId) {
+                        var badgeElem = document.getElementById('sub-status-' + subId);
+                        if (!badgeElem) return;
+
+                        fetch('queue-status?submissionId=' + subId)
+                            .then(function(res) { return res.json(); })
+                            .then(function(data) {
+                                if (data && data.status) {
+                                    if (data.status === 'Completed') {
+                                        badgeElem.className = 'badge-submitted';
+                                        badgeElem.innerText = '✅ Đã chấm xong';
+                                    } else if (data.status === 'Processing') {
+                                        badgeElem.className = 'badge-processing';
+                                        badgeElem.innerText = '🔄 ' + (data.detail || 'Đang chấm bài...');
+                                        stillPending = true;
+                                    } else if (data.status === 'Failed') {
+                                        badgeElem.className = 'badge-failed';
+                                        badgeElem.innerText = '❌ Chấm thất bại';
+                                    } else {
+                                        badgeElem.className = 'badge-pending';
+                                        badgeElem.innerText = '⏳ ' + (data.detail || 'Trong hàng đợi chấm');
+                                        stillPending = true;
+                                    }
+                                }
+                            })
+                            .catch(function(err) {
+                                console.log('Poll status error:', err);
+                            });
+                    });
+
+                    if (!stillPending) {
+                        clearInterval(pollInterval);
+                    }
+                }, 3000); // Thăm dò mỗi 3 giây
+            }
         });
     </script>
 

@@ -12,13 +12,13 @@ import java.util.Map;
 public class SubmissionDAO extends DBContext {
 
     /**
-     * Thêm mới một bản ghi nộp bài của sinh viên vào CSDL SQL Server
+     * Thêm mới một bản ghi nộp bài của sinh viên vào CSDL SQL Server (trả về submission_id tự tăng)
      */
     public boolean insertSubmission(Submission s) {
         String sql = "INSERT INTO SUBMISSIONS (student_id, assignment_id, file_path, sha256_hash, file_size, submitted_at, status) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+            PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
             ps.setInt(1, s.getStudentId());
             ps.setInt(2, s.getAssignmentId());
             ps.setString(3, s.getFilePath());
@@ -26,6 +26,30 @@ public class SubmissionDAO extends DBContext {
             ps.setInt(5, s.getFileSize());
             ps.setTimestamp(6, s.getSubmittedAt() != null ? s.getSubmittedAt() : new Timestamp(System.currentTimeMillis()));
             ps.setString(7, s.getStatus() != null ? s.getStatus() : "Completed");
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                ResultSet rs = ps.getGeneratedKeys();
+                if (rs.next()) {
+                    s.setSubmissionId(rs.getInt(1));
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Cập nhật trạng thái bài nộp (Pending -> Processing -> Completed / Failed)
+     * Dùng cho Hàng đợi chấm bài (Grading Queue)
+     */
+    public boolean updateSubmissionStatus(int submissionId, String status) {
+        String sql = "UPDATE SUBMISSIONS SET status = ? WHERE submission_id = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, status);
+            ps.setInt(2, submissionId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
