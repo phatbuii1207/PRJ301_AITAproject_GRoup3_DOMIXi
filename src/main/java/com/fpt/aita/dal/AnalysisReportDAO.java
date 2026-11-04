@@ -378,4 +378,124 @@ public class AnalysisReportDAO extends DBContext {
         opt.setComplexityAfter("O(N)");
         return opt;
     }
+
+    // =========================================================================
+    // PHAN INSERT DU LIEU BOC TACH AST VA BO LUAT RULES (THANH VIEN 1)
+    // =========================================================================
+
+    public int insertSourceFile(int submissionId, String fileName, int loc) {
+        String sql = "INSERT INTO SOURCE_FILES (submission_id, file_name, file_type, loc) VALUES (?, ?, 'java', ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, submissionId);
+            ps.setString(2, fileName);
+            ps.setInt(3, loc);
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi insertSourceFile: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    public int insertMethod(int fileId, String methodName, int startLine, int endLine,
+                            int loopDepth, int cyclomaticComplexity, String estimatedComplexity, boolean isRecursive) {
+        String sql = "INSERT INTO METHODS (file_id, method_name, start_line, end_line, loop_depth, "
+                   + "cyclomatic_complexity, estimated_complexity, is_recursive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, fileId);
+            ps.setString(2, methodName);
+            ps.setInt(3, startLine);
+            ps.setInt(4, endLine);
+            ps.setInt(5, loopDepth);
+            ps.setInt(6, cyclomaticComplexity);
+            ps.setString(7, estimatedComplexity);
+            ps.setBoolean(8, isRecursive);
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi insertMethod: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    public int getRuleIdByCode(String ruleCode) {
+        String sql = "SELECT rule_id FROM RULES WHERE rule_code = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, ruleCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("rule_id");
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi getRuleIdByCode: " + e.getMessage());
+        }
+        return 1;
+    }
+
+    public boolean insertIssue(int fileId, Integer methodId, int ruleId, int lineNumber,
+                               String severity, String message, String aiExplanation) {
+        String sql = "INSERT INTO ISSUES (file_id, method_id, rule_id, line_number, severity, message, ai_explanation) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, fileId);
+            if (methodId != null && methodId > 0) {
+                ps.setInt(2, methodId);
+            } else {
+                ps.setNull(2, java.sql.Types.INTEGER);
+            }
+            ps.setInt(3, ruleId);
+            ps.setInt(4, lineNumber);
+            ps.setString(5, severity);
+            ps.setString(6, message);
+            ps.setString(7, aiExplanation);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Loi insertIssue: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public int insertAnalysisReport(int submissionId, int qualityScore, int totalIssues) {
+        String deleteSql = "DELETE FROM ANALYSIS_REPORTS WHERE submission_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(deleteSql)) {
+            ps.setInt(1, submissionId);
+            ps.executeUpdate();
+        } catch (SQLException ignored) {}
+
+        String sql = "INSERT INTO ANALYSIS_REPORTS (submission_id, quality_score, total_issues, created_at) "
+                   + "VALUES (?, ?, ?, GETDATE())";
+        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, submissionId);
+            ps.setInt(2, qualityScore);
+            ps.setInt(3, totalIssues);
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi insertAnalysisReport: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    public void cleanOldAnalysisData(int submissionId) {
+        try (PreparedStatement ps1 = connection.prepareStatement("DELETE FROM SOURCE_FILES WHERE submission_id = ?");
+             PreparedStatement ps2 = connection.prepareStatement("DELETE FROM ANALYSIS_REPORTS WHERE submission_id = ?")) {
+            ps1.setInt(1, submissionId);
+            ps1.executeUpdate();
+            ps2.setInt(1, submissionId);
+            ps2.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Loi cleanOldAnalysisData: " + e.getMessage());
+        }
+    }
 }

@@ -373,7 +373,7 @@ public class CourseDetailServlet extends HttpServlet {
                         boolean ok = submissionDAO.insertSubmission(sub);
                         if (ok) {
                             // 6. Đưa bài nộp vào Hàng đợi chấm bài bất đồng bộ (Grading Queue)
-                            com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId());
+                            com.fpt.aita.service.queue.GradingQueueManager.getInstance().enqueue(sub.getSubmissionId(), destFile.getAbsolutePath());
 
                             if (sandbox != null) session.setAttribute("sandboxSubmissionResult", sandbox);
                             session.setAttribute("flashSuccess", "🎉 Sinh viên <b>" + escapeHtml(currentUser.getFullName()) 
