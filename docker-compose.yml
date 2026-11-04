@@ -1,16 +1,21 @@
+# Optional for the machine hosting PostgreSQL. Teammates can connect over JDBC without Docker.
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver_aita
-    restart: always
-    user: root
+  postgres:
+    image: postgres:16
+    container_name: postgres_aita
+    restart: unless-stopped
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-AST_CodeAnalysisDB}
+      POSTGRES_USER: ${DB_USER:-aita}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     ports:
-      - "1433:1433"
+      - "${DB_BIND_HOST:-127.0.0.1}:${DB_PORT:-55433}:5432"
     volumes:
-      - mssql_data:/var/opt/mssql/data
-
+      - aita_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 volumes:
-  mssql_data:
+  aita_postgres_data:

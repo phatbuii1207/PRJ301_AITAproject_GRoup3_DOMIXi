@@ -16,9 +16,9 @@ public class UserDAO extends DBContext {
             return null;
         }
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
-                + "(SELECT TOP 1 uc.class_id FROM USER_CLASS uc WHERE uc.user_id = u.user_id) AS class_id "
-                + "FROM USERS u "
-                + "WHERE u.username = ? AND u.password_hash = ?";
+                + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
+                + "FROM \"USERS\" u "
+                + "WHERE LOWER(u.username) = LOWER(?) AND u.password_hash = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, username);
@@ -43,8 +43,8 @@ public class UserDAO extends DBContext {
     public List<User> getAllUsers() {
         List<User> list = new ArrayList<>();
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
-                + "(SELECT TOP 1 uc.class_id FROM USER_CLASS uc WHERE uc.user_id = u.user_id) AS class_id "
-                + "FROM USERS u ORDER BY u.user_id DESC";
+                + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
+                + "FROM \"USERS\" u ORDER BY u.user_id DESC";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
@@ -66,8 +66,8 @@ public class UserDAO extends DBContext {
     // 3. READ: Tìm User theo ID
     public User getUserById(int userId) {
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
-                + "(SELECT TOP 1 uc.class_id FROM USER_CLASS uc WHERE uc.user_id = u.user_id) AS class_id "
-                + "FROM USERS u WHERE u.user_id = ?";
+                + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
+                + "FROM \"USERS\" u WHERE u.user_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, userId);
@@ -90,8 +90,8 @@ public class UserDAO extends DBContext {
     // 4. READ: Tìm User theo Username
     public User getUserByUsername(String username) {
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
-                + "(SELECT TOP 1 uc.class_id FROM USER_CLASS uc WHERE uc.user_id = u.user_id) AS class_id "
-                + "FROM USERS u WHERE u.username = ?";
+                + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
+                + "FROM \"USERS\" u WHERE LOWER(u.username) = LOWER(?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, username);
@@ -113,7 +113,7 @@ public class UserDAO extends DBContext {
 
     // 5. CREATE: Thêm mới User vào CSDL (bảng USERS và liên kết USER_CLASS nếu có)
     public boolean insertUser(User user) {
-        String sql = "INSERT INTO USERS (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO \"USERS\" (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getUsername());
@@ -141,7 +141,7 @@ public class UserDAO extends DBContext {
 
     // 6. UPDATE: Cập nhật thông tin User (họ tên, vai trò và lớp học)
     public boolean updateUser(User user) {
-        String sql = "UPDATE USERS SET full_name = ?, role = ? WHERE user_id = ?";
+        String sql = "UPDATE \"USERS\" SET full_name = ?, role = ? WHERE user_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, user.getFullName());
@@ -151,7 +151,7 @@ public class UserDAO extends DBContext {
             if (affected > 0) {
                 if (user.getClassId() != null) {
                     // Cập nhật lại lớp trong bảng USER_CLASS
-                    String delSql = "DELETE FROM USER_CLASS WHERE user_id = ?";
+                    String delSql = "DELETE FROM \"USER_CLASS\" WHERE user_id = ?";
                     try (PreparedStatement psDel = connection.prepareStatement(delSql)) {
                         psDel.setInt(1, user.getUserId());
                         psDel.executeUpdate();
@@ -168,7 +168,7 @@ public class UserDAO extends DBContext {
 
     // 7. UPDATE: Cập nhật / Đổi mật khẩu
     public boolean updatePassword(int userId, String newPasswordHash) {
-        String sql = "UPDATE USERS SET password_hash = ? WHERE user_id = ?";
+        String sql = "UPDATE \"USERS\" SET password_hash = ? WHERE user_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, newPasswordHash);
@@ -182,8 +182,8 @@ public class UserDAO extends DBContext {
 
     // 8. DELETE: Xóa User theo ID (xóa liên kết USER_CLASS trước)
     public boolean deleteUser(int userId) {
-        String sqlClass = "DELETE FROM USER_CLASS WHERE user_id = ?";
-        String sqlUser = "DELETE FROM USERS WHERE user_id = ?";
+        String sqlClass = "DELETE FROM \"USER_CLASS\" WHERE user_id = ?";
+        String sqlUser = "DELETE FROM \"USERS\" WHERE user_id = ?";
         try {
             try (PreparedStatement psClass = connection.prepareStatement(sqlClass)) {
                 psClass.setInt(1, userId);
@@ -205,7 +205,7 @@ public class UserDAO extends DBContext {
             System.err.println("isUsernameExists: chưa có kết nối CSDL");
             return true;
         }
-        String sql = "SELECT 1 FROM USERS WHERE username = ?";
+        String sql = "SELECT 1 FROM \"USERS\" WHERE LOWER(username) = LOWER(?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
@@ -223,7 +223,7 @@ public class UserDAO extends DBContext {
             System.err.println("register: chưa có kết nối CSDL");
             return false;
         }
-        String sql = "INSERT INTO USERS (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO \"USERS\" (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, u.getUsername());
             ps.setString(2, u.getPasswordHash());
@@ -258,7 +258,7 @@ public class UserDAO extends DBContext {
 
     // 11. Helper: Gán người dùng vào lớp (USER_CLASS)
     public boolean insertUserClass(int userId, int classId) {
-        String sql = "INSERT INTO USER_CLASS (user_id, class_id) VALUES (?, ?)";
+        String sql = "INSERT INTO \"USER_CLASS\" (user_id, class_id) VALUES (?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setInt(2, classId);
@@ -271,7 +271,7 @@ public class UserDAO extends DBContext {
 
     // 11b. Helper: Tự động ghi danh sinh viên mới vào toàn bộ các lớp học hiện có
     public boolean enrollStudentInAllClasses(int userId) {
-        String sql = "INSERT INTO USER_CLASS (user_id, class_id) SELECT ?, class_id FROM CLASSES";
+        String sql = "INSERT INTO \"USER_CLASS\" (user_id, class_id) SELECT ?, class_id FROM \"CLASSES\"";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             return ps.executeUpdate() > 0;
@@ -284,7 +284,7 @@ public class UserDAO extends DBContext {
     // 12. Lấy danh sách ID các lớp mà user phụ trách / tham gia (hỗ trợ Giảng viên dạy 2 lớp)
     public List<Integer> getClassIdsByUserId(int userId) {
         List<Integer> list = new ArrayList<>();
-        String sql = "SELECT class_id FROM USER_CLASS WHERE user_id = ?";
+        String sql = "SELECT class_id FROM \"USER_CLASS\" WHERE user_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {

@@ -1,48 +1,41 @@
 package com.fpt.aita.dal;
 
+import com.fpt.aita.config.AppConfig;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
-public class DBContext {
+/** Shared PostgreSQL JDBC configuration. No credentials or SQL Server fallback in source. */
+public class DBContext implements AutoCloseable {
     protected Connection connection;
 
     public DBContext() {
-        try {
-            // Thay đổi user và password theo tài khoản SQL Server của bạn
-            
-            String user = "sa";
-            String pass = "sa123";
-
-            String host = System.getenv("DB_HOST") != null ? System.getenv("DB_HOST") : "localhost";
-            String url = "jdbc:sqlserver://" + host + ":1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true";
-
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            try {
-                connection = DriverManager.getConnection(url, user, pass);
-            } catch (SQLException ex) {
-                try {
-                    connection = DriverManager.getConnection(url, user, "123456@Password");
-                } catch (SQLException ex2) {
-                    throw ex;
-                }
-            }
-        } catch (ClassNotFoundException | SQLException ex) {
-            System.err.println("Lỗi kết nối CSDL: " + ex.getMessage());
-            ex.printStackTrace();
+        try { connection = openConnection(); }
+        catch (SQLException ex) {
+            System.err.println("Không kết nối được PostgreSQL. Kiểm tra DB_URL, DB_USER, DB_PASSWORD / AITA_ENV_FILE. SQLState=" + ex.getSQLState());
         }
     }
-    public Connection getConnection() {
-        return connection;
-    }
 
-    public static void main(String[] args) {
-    DBContext db = new DBContext();
-    if (db.connection != null) {
-        System.out.println("===> KẾT NỐI DATABASE THÀNH CÔNG!");
-    } else {
-        System.out.println("===> KẾT NỐI DATABASE THẤT BẠI! Hãy kiểm tra user/pass/port.");
+    public static Connection openConnection() throws SQLException {
+        String url = AppConfig.get("DB_URL", "jdbc:postgresql://" + AppConfig.get("DB_HOST", "localhost")
+                + ":" + AppConfig.get("DB_PORT", "5432") + "/" + AppConfig.get("DB_NAME", "AST_CodeAnalysisDB"));
+        if (!url.startsWith("jdbc:postgresql:")) throw new SQLException("DB_URL must use PostgreSQL", "08001");
+        String user = AppConfig.get("DB_USER", "aita"), password = AppConfig.get("DB_PASSWORD", "");
+        if (password.isEmpty()) throw new SQLException("DB_PASSWORD is required", "08001");
+        try { Class.forName("org.postgresql.Driver"); }
+        catch (ClassNotFoundException ex) { throw new SQLException("PostgreSQL JDBC driver missing", "08001"); }
+        Properties properties = new Properties();
+        properties.setProperty("user", user); properties.setProperty("password", password);
+        properties.setProperty("connectTimeout", "10"); properties.setProperty("socketTimeout", "30");
+        properties.setProperty("ApplicationName", "AITA");
+        return DriverManager.getConnection(url, properties);
     }
-}
-
+    public Connection getConnection() { return connection; }
+    @Override public void close() throws SQLException { if (connection != null) connection.close(); }
+    public static void main(String[] args) throws SQLException {
+        try (Connection db = openConnection()) {
+            System.out.println("KẾT NỐI POSTGRESQL THÀNH CÔNG: " + db.getMetaData().getDatabaseProductName());
+        }
+    }
 }

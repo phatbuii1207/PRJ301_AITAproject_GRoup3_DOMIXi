@@ -7,7 +7,7 @@ Hệ thống Hỗ trợ Giảng viên và Sinh viên trong việc kiểm tra, đ
 ## 🛠️ Công nghệ sử dụng
 - **Backend:** Java EE 8 (Servlet 4.0, JSP, JSTL, JDBC)
 - **Architecture:** MVC Pattern (Model - View - Controller / DAO Layer)
-- **Database:** Microsoft SQL Server 2019+ (Database: AST_CodeAnalysisDB, 10 bảng chuẩn 3NF)
+- **Database:** PostgreSQL 16 (Database: AST_CodeAnalysisDB, 15 bảng / 93 thuộc tính)
 - **Build Tool:** Apache Maven
 - **Server:** Apache Tomcat 9.0.x
 - **IDE:** Apache NetBeans 17+ / JDK 1.8
@@ -36,11 +36,13 @@ Tập báo cáo bằng [kịch bản thuyết trình, giải thích code và dem
 chạy `./scripts/demo-sandbox.sh all` để thử 7 ca và tạo ZIP mẫu dùng trên web.
 
 ## 🚀 Hướng dẫn Cài đặt & Chạy ứng dụng
-1. **Thiết lập Database:**
-   - Mở SQL Server Management Studio (SSMS).
-   - Chạy file AITA_Database.sql (bấm F5) để khởi tạo CSDL AST_CodeAnalysisDB và dữ liệu mẫu.
-2. **Cấu hình DBContext.java:**
-   - Mở src/main/java/com/fpt/aita/dal/DBContext.java và chỉnh sửa thông tin tài khoản SQL Server (user, password, instanceName hoặc port 1433).
+1. **Thiết lập PostgreSQL (không cần Docker):**
+   - Cài PostgreSQL 16 và tạo database `AST_CodeAnalysisDB` bằng pgAdmin/DBeaver.
+   - Kết nối vào database đó, chạy toàn bộ `AITA_Database.sql` để tạo bảng và dữ liệu mẫu.
+2. **Cấu hình JDBC:**
+   - Copy `.env.example` thành `.env`, điền `DB_URL`, `DB_USER`, `DB_PASSWORD` của máy bạn hoặc database chung.
+   - Với Tomcat/NetBeans, thêm VM option `-Daita.env.file=/đường/dẫn/tuyệt/đối/project/.env`, rồi khởi động lại Tomcat.
+   - Không sửa username/password trong Java. Xem [hướng dẫn PostgreSQL cho cả nhóm](docs/POSTGRESQL_SETUP.md) và [kết quả kiểm chứng](docs/POSTGRESQL_VERIFICATION.md).
 3. **Chạy ứng dụng trên NetBeans:**
    - Mở Project bằng NetBeans 17.
    - Chuột phải Project -> Clean and Build.

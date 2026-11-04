@@ -218,7 +218,7 @@ public class AiOptimizationDAO extends DBContext {
         if (o == null || connection == null) {
             return false;
         }
-        String sql = "INSERT INTO [dbo].[AI_OPTIMIZATIONS] ([method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at]) "
+        String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, o.getMethodId());
@@ -241,8 +241,8 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return null;
         }
-        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at] "
-                + "FROM [dbo].[AI_OPTIMIZATIONS] WHERE [method_id] = ? ORDER BY [created_at] DESC";
+        String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
+                + "FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ? ORDER BY created_at DESC LIMIT 1";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -264,12 +264,12 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return list;
         }
-        String sql = "SELECT o.[optimization_id], o.[method_id], o.[original_code], o.[optimized_code], o.[explanation], o.[new_complexity], o.[created_at] "
-                + "FROM [dbo].[AI_OPTIMIZATIONS] o "
-                + "INNER JOIN [dbo].[METHODS] m ON o.[method_id] = m.[method_id] "
-                + "INNER JOIN [dbo].[SOURCE_FILES] sf ON m.[file_id] = sf.[file_id] "
-                + "WHERE sf.[submission_id] = ? "
-                + "ORDER BY o.[created_at] DESC";
+        String sql = "SELECT o.optimization_id, o.method_id, o.original_code, o.optimized_code, o.explanation, o.new_complexity, o.created_at "
+                + "FROM \"AI_OPTIMIZATIONS\" o "
+                + "INNER JOIN \"METHODS\" m ON o.method_id = m.method_id "
+                + "INNER JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
+                + "WHERE sf.submission_id = ? "
+                + "ORDER BY o.created_at DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -290,10 +290,10 @@ public class AiOptimizationDAO extends DBContext {
         if (code == null || code.trim().isEmpty() || connection == null) {
             return null;
         }
-        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at] "
-                + "FROM [dbo].[AI_OPTIMIZATIONS] "
-                + "WHERE CAST([original_code] AS NVARCHAR(MAX)) = CAST(? AS NVARCHAR(MAX)) "
-                + "ORDER BY [created_at] DESC";
+        String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
+                + "FROM \"AI_OPTIMIZATIONS\" "
+                + "WHERE CAST(original_code AS TEXT) = CAST(? AS TEXT) "
+                + "ORDER BY created_at DESC LIMIT 1";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, code);
             try (ResultSet rs = ps.executeQuery()) {
@@ -314,7 +314,7 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return false;
         }
-        String sql = "UPDATE [dbo].[ISSUES] SET [ai_explanation] = ? WHERE [issue_id] = ?";
+        String sql = "UPDATE \"ISSUES\" SET ai_explanation = ? WHERE issue_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, text);
             ps.setInt(2, issueId);
@@ -336,12 +336,12 @@ public class AiOptimizationDAO extends DBContext {
         }
 
         // Lấy danh sách các phương thức thuộc bài nộp
-        String sqlMethods = "SELECT m.[method_id], m.[file_id], sf.[file_name], m.[method_name], "
-                + "m.[start_line], m.[end_line], m.[estimated_complexity] "
-                + "FROM [dbo].[METHODS] m "
-                + "INNER JOIN [dbo].[SOURCE_FILES] sf ON m.[file_id] = sf.[file_id] "
-                + "WHERE sf.[submission_id] = ? "
-                + "ORDER BY sf.[file_id], m.[start_line]";
+        String sqlMethods = "SELECT m.method_id, m.file_id, sf.file_name, m.method_name, "
+                + "m.start_line, m.end_line, m.estimated_complexity "
+                + "FROM \"METHODS\" m "
+                + "INNER JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
+                + "WHERE sf.submission_id = ? "
+                + "ORDER BY sf.file_id, m.start_line";
 
         try (PreparedStatement psMethod = connection.prepareStatement(sqlMethods)) {
             psMethod.setInt(1, submissionId);
@@ -365,11 +365,11 @@ public class AiOptimizationDAO extends DBContext {
 
         // Lấy danh sách các issue gắn với từng method
         if (!methods.isEmpty()) {
-            String sqlIssues = "SELECT i.[issue_id], i.[method_id], r.[rule_code], i.[severity], i.[message], i.[line_number] "
-                    + "FROM [dbo].[ISSUES] i "
-                    + "INNER JOIN [dbo].[RULES] r ON i.[rule_id] = r.[rule_id] "
-                    + "INNER JOIN [dbo].[SOURCE_FILES] sf ON i.[file_id] = sf.[file_id] "
-                    + "WHERE sf.[submission_id] = ? AND i.[method_id] IS NOT NULL";
+            String sqlIssues = "SELECT i.issue_id, i.method_id, r.rule_code, i.severity, i.message, i.line_number "
+                    + "FROM \"ISSUES\" i "
+                    + "INNER JOIN \"RULES\" r ON i.rule_id = r.rule_id "
+                    + "INNER JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
+                    + "WHERE sf.submission_id = ? AND i.method_id IS NOT NULL";
 
             try (PreparedStatement psIssue = connection.prepareStatement(sqlIssues)) {
                 psIssue.setInt(1, submissionId);
@@ -408,7 +408,7 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return false;
         }
-        String sql = "SELECT 1 FROM [dbo].[AI_OPTIMIZATIONS] WHERE [method_id] = ?";
+        String sql = "SELECT 1 FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -445,7 +445,7 @@ public class AiOptimizationDAO extends DBContext {
         AiOptimizationDAO dao = new AiOptimizationDAO();
 
         if (dao.connection == null) {
-            System.err.println("Không thể kết nối CSDL SQL Server. Vui lòng kiểm tra dịch vụ SQL Server/Docker.");
+            System.err.println("Không thể kết nối PostgreSQL. Kiểm tra DB_URL, DB_USER, DB_PASSWORD và dịch vụ database.");
             return;
         }
 
@@ -472,7 +472,7 @@ public class AiOptimizationDAO extends DBContext {
 
             // 3. Đọc theo submission_id
             List<AiOptimization> listBySub = dao.getBySubmissionId(testSubmissionId);
-            System.out.println("\n3. Số bản ghi AI_OPTIMIZATIONS của submission_id " + testSubmissionId + ": " + listBySub.size());
+            System.out.println("\n3. Số bản ghi \"AI_OPTIMIZATIONS\" của submission_id " + testSubmissionId + ": " + listBySub.size());
 
             // 4. Thử thêm một bản ghi mới (sử dụng method_id = 1 từ seed data nếu chưa có)
             int insertMethodId = 1;

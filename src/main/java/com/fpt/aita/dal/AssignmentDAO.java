@@ -12,8 +12,8 @@ public class AssignmentDAO extends DBContext {
     public List<Assignment> getAllAssignments() {
         List<Assignment> list = new ArrayList<>();
         String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.title, a.description, a.created_at "
-                + "FROM ASSIGNMENTS a "
-                + "JOIN USERS u ON a.lecturer_id = u.user_id "
+                + "FROM \"ASSIGNMENTS\" a "
+                + "JOIN \"USERS\" u ON a.lecturer_id = u.user_id "
                 + "ORDER BY a.assignment_id DESC";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -37,8 +37,8 @@ public class AssignmentDAO extends DBContext {
     // 2. READ: Tìm 1 bài tập theo ID (dùng khi bấm nút "Sửa" hoặc kiểm tra Deadline)
     public Assignment getAssignmentById(int id) {
         String sql = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.course_id, a.title, a.description, a.deadline, a.created_at "
-                + "FROM ASSIGNMENTS a "
-                + "JOIN USERS u ON a.lecturer_id = u.user_id "
+                + "FROM \"ASSIGNMENTS\" a "
+                + "JOIN \"USERS\" u ON a.lecturer_id = u.user_id "
                 + "WHERE a.assignment_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -62,9 +62,9 @@ public class AssignmentDAO extends DBContext {
         return null;
     }
 
-    // 3. CREATE: Thêm bài tập mới vào SQL Server
+    // 3. CREATE: Thêm bài tập mới vào PostgreSQL
     public boolean insertAssignment(Assignment a) {
-        String sql = "INSERT INTO ASSIGNMENTS (lecturer_id, title, description) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO \"ASSIGNMENTS\" (lecturer_id, title, description) VALUES (?, ?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, a.getLecturerId());
@@ -79,7 +79,7 @@ public class AssignmentDAO extends DBContext {
 
     // 4. UPDATE: Cập nhật thông tin bài tập
     public boolean updateAssignment(Assignment a) {
-        String sql = "UPDATE ASSIGNMENTS SET title = ?, description = ? WHERE assignment_id = ?";
+        String sql = "UPDATE \"ASSIGNMENTS\" SET title = ?, description = ? WHERE assignment_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, a.getTitle());
@@ -94,7 +94,7 @@ public class AssignmentDAO extends DBContext {
 
     // 4b. UPDATE TOÀN DIỆN: Cập nhật tiêu đề, mô tả và hạn nộp (Deadline) của bài tập
     public boolean updateAssignmentFull(Assignment a) {
-        String sql = "UPDATE ASSIGNMENTS SET title = ?, description = ?, deadline = ? WHERE assignment_id = ?";
+        String sql = "UPDATE \"ASSIGNMENTS\" SET title = ?, description = ?, deadline = ? WHERE assignment_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, a.getTitle());
             ps.setString(2, a.getDescription());
@@ -109,7 +109,7 @@ public class AssignmentDAO extends DBContext {
 
     // 5. DELETE: Xóa bài tập theo ID
     public boolean deleteAssignment(int id) {
-        String sql = "DELETE FROM ASSIGNMENTS WHERE assignment_id = ?";
+        String sql = "DELETE FROM \"ASSIGNMENTS\" WHERE assignment_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
@@ -131,8 +131,8 @@ public class AssignmentDAO extends DBContext {
         // Truy vấn ưu tiên nếu DB đã có cột course_id
         String sqlWithCourse = "SELECT a.assignment_id, a.lecturer_id, u.full_name, a.title, a.description, a.created_at, "
                              + "a.course_id, a.deadline "
-                             + "FROM ASSIGNMENTS a "
-                             + "JOIN USERS u ON a.lecturer_id = u.user_id "
+                             + "FROM \"ASSIGNMENTS\" a "
+                             + "JOIN \"USERS\" u ON a.lecturer_id = u.user_id "
                              + "WHERE a.course_id = ? "
                              + "ORDER BY a.assignment_id DESC";
 
@@ -162,7 +162,7 @@ public class AssignmentDAO extends DBContext {
 
     // 7. Thêm bài tập mới có liên kết course_id và deadline
     public boolean insertAssignmentWithCourse(Assignment a) {
-        String sql = "INSERT INTO ASSIGNMENTS (lecturer_id, title, description, course_id, deadline) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO \"ASSIGNMENTS\" (lecturer_id, title, description, course_id, deadline) VALUES (?, ?, ?, ?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, a.getLecturerId());
@@ -180,7 +180,7 @@ public class AssignmentDAO extends DBContext {
 
     // 8. Giảng viên cập nhật Deadline của bài tập
     public boolean updateDeadline(int assignmentId, java.sql.Timestamp deadline) {
-        String sql = "UPDATE ASSIGNMENTS SET deadline = ? WHERE assignment_id = ?";
+        String sql = "UPDATE \"ASSIGNMENTS\" SET deadline = ? WHERE assignment_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setTimestamp(1, deadline);

@@ -1,5 +1,7 @@
 # Kiểm chứng tích hợp trước khi push
 
+> Biên bản lịch sử trước khi đổi database. Hệ thống hiện dùng PostgreSQL; xem [kiểm chứng mới](POSTGRESQL_VERIFICATION.md).
+
 Đã ghép bộ chấm test case với 19 commit AST/AI mới từ origin/main.
 Giữ pipeline chấm chức năng → lưu điểm → phân tích AST → tối ưu AI.
 Lỗi AST/AI không ghi đè điểm chức năng. API AI chạy ở backend, không ở sandbox.

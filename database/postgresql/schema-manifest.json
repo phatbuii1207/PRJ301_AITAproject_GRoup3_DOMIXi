@@ -1,0 +1,497 @@
+{
+  "CLASSES": [
+    {
+      "name": "class_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "class_code",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "class_name",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "USERS": [
+    {
+      "name": "user_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "username",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "password_hash",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "full_name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "role",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "USER_CLASS": [
+    {
+      "name": "user_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "class_id",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "ASSIGNMENTS": [
+    {
+      "name": "assignment_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "lecturer_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "course_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "title",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "description",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "deadline",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "created_at",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "SUBMISSIONS": [
+    {
+      "name": "submission_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "student_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "assignment_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "file_path",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "sha256_hash",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "file_size",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "submitted_at",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "status",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "SOURCE_FILES": [
+    {
+      "name": "file_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "submission_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "file_name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "file_type",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "loc",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "METHODS": [
+    {
+      "name": "method_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "file_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "method_name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "start_line",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "end_line",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "loop_depth",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "cyclomatic_complexity",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "estimated_complexity",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "is_recursive",
+      "boolean": true,
+      "identity": false
+    }
+  ],
+  "RULES": [
+    {
+      "name": "rule_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "rule_code",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "category",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "weight",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "enabled",
+      "boolean": true,
+      "identity": false
+    }
+  ],
+  "ISSUES": [
+    {
+      "name": "issue_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "file_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "method_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "rule_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "line_number",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "severity",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "message",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "ai_explanation",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "ANALYSIS_REPORTS": [
+    {
+      "name": "report_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "submission_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "quality_score",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "total_issues",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "created_at",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "AI_OPTIMIZATIONS": [
+    {
+      "name": "optimization_id",
+      "boolean": false,
+      "identity": true
+    },
+    {
+      "name": "method_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "original_code",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "optimized_code",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "explanation",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "created_at",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "new_complexity",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "GRADING_CONFIGS": [
+    {
+      "name": "assignment_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "main_class",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "config_version",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "GRADING_TEST_CASES": [
+    {
+      "name": "assignment_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "case_order",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "case_name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "stdin_text",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "expected_output",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "weight",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "is_hidden",
+      "boolean": true,
+      "identity": false
+    }
+  ],
+  "GRADING_REPORTS": [
+    {
+      "name": "submission_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "main_class",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "config_version",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "verdict",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "score",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "message",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "graded_at",
+      "boolean": false,
+      "identity": false
+    }
+  ],
+  "GRADING_CASE_RESULTS": [
+    {
+      "name": "submission_id",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "case_order",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "case_name",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "stdin_text",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "expected_output",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "weight",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "is_hidden",
+      "boolean": true,
+      "identity": false
+    },
+    {
+      "name": "verdict",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "actual_output",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "diagnostics",
+      "boolean": false,
+      "identity": false
+    },
+    {
+      "name": "execution_time_ms",
+      "boolean": false,
+      "identity": false
+    }
+  ]
+}

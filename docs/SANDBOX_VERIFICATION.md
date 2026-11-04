@@ -1,5 +1,7 @@
 # Biên bản kiểm tra Docker Sandbox
 
+> Biên bản lịch sử trước khi đổi database. Hệ thống hiện dùng PostgreSQL; xem [kiểm chứng mới](POSTGRESQL_VERIFICATION.md).
+
 Ngày kiểm tra: 2026-10-29. Thực hiện trên máy local, không push GitHub.
 
 ## Kiểm tra lại để chuẩn bị báo cáo — 2026-11-01

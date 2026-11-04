@@ -5,7 +5,7 @@ Bộ chấm hoạt động độc lập với API key/AI. Java của sinh viên 
 
 ## Cài đặt
 
-1. Trong đúng database SQL Server/Azure SQL của ứng dụng, chạy
+1. Trong đúng database PostgreSQL của ứng dụng, chạy
    `database/migrations/001_test_case_grading.sql` sau khi đã có schema AITA gốc.
    Script chỉ thêm 4 bảng, có transaction và có thể chạy lại; không xóa dữ liệu cũ.
    Chạy thêm `database/migrations/002_ai_new_complexity.sql` cho database cũ để
@@ -15,7 +15,7 @@ Bộ chấm hoạt động độc lập với API key/AI. Java của sinh viên 
 
 Máy hiện tại dùng Maven tại
 `/home/phambuuthinh/.cache/csd-tools/apache-maven-3.9.9/bin/mvn`.
-Migration đã được áp dụng và kiểm tra chạy lại trên SQL Server local. Chưa kết nối
+Bốn bảng chấm đã nằm trong AITA_Database.sql PostgreSQL. Các kiểm tra SQL Server trước đây được lưu như lịch sử. Chưa kết nối
 hay thay đổi database Azure của nhóm; người triển khai cần chạy migration ở đó.
 File ZIP vẫn lưu theo đường dẫn upload local trên máy Tomcat hiện tại.
 

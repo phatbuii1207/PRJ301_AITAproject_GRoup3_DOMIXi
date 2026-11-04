@@ -162,7 +162,7 @@ MAVEN_BIN=/duong/dan/apache-maven/bin/mvn ./scripts/demo-sandbox.sh prepare
 
 `prepare` compile CLI demo tin cậy và tạo 7 ZIP nhỏ trong `target/sandbox-demo/`.
 Source dễ đọc nằm trong `target/sandbox-demo/sources/<case>/Main.java`.
-Không cần SQL Server hoặc Tomcat cho demo terminal; module thực thi vẫn là service
+Không cần PostgreSQL hoặc Tomcat cho demo terminal; module thực thi vẫn là service
 thật của project, không phải chương trình mô phỏng.
 
 Lệnh `java ... SandboxDemo` trên host chạy **CLI điều phối tin cậy**. CLI gọi
@@ -313,7 +313,7 @@ Không dùng lệnh xóa hàng loạt container vì máy còn database/các proj
 ## 4. Demo trên giao diện web
 
 Luồng web hiện đã tích hợp bộ chấm. Build image, chạy migration, deploy WAR mới,
-bật SQL Server và dùng bài demo riêng có deadline tương lai.
+bật PostgreSQL và dùng bài demo riêng có deadline tương lai.
 
 1. Chạy `python3 scripts/prepare-grading-demo.py` để tạo các ZIP cộng hai số.
 2. Giảng viên mở link Test case và thêm input/expected/weight theo
@@ -621,7 +621,7 @@ là bằng chứng trình bày riêng, không cộng chúng thành số JUnit te
 - [ ] Đã chạy `./scripts/demo-sandbox.sh all` và các ca đều PASS.
 - [ ] Đã mở hai terminal cùng thư mục project, Terminal B chạy watch.
 - [ ] Đã mở sẵn code Service, Workspace, Dockerfile và run.sh trong IDE.
-- [ ] Nếu demo web: WAR mới, SQL Server chạy, bài demo chưa hết hạn.
+- [ ] Nếu demo web: WAR mới, PostgreSQL chạy, bài demo chưa hết hạn.
 - [ ] Có ảnh/log dự phòng và biết log là bằng chứng lượt chạy trước.
 - [ ] Nói đúng ba ý: SUCCESS chưa phải đúng đáp án; timeout gồm compile; network none còn loopback.
 - [ ] Kết thúc kiểm tra container đã dọn, không xóa nhầm database/container khác.

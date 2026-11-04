@@ -75,7 +75,7 @@ public class CourseDAO extends DBContext {
     public List<Course> getAllCourses() {
         List<Course> list = new ArrayList<>();
         // Ưu tiên 1: Bảng COURSES chuẩn (PRJ301, CSD201, PRO192, DBI202)
-        String sqlCourses = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES ORDER BY course_id ASC";
+        String sqlCourses = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" ORDER BY course_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlCourses);
             ResultSet rs = ps.executeQuery();
@@ -96,7 +96,7 @@ public class CourseDAO extends DBContext {
         }
 
         // Ưu tiên 2: Fallback sang bảng CLASSES
-        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES ORDER BY class_id ASC";
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" ORDER BY class_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlClasses);
             ResultSet rs = ps.executeQuery();
@@ -116,7 +116,7 @@ public class CourseDAO extends DBContext {
      * 2. READ: Tìm môn học theo ID
      */
     public Course getCourseById(int id) {
-        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES WHERE course_id = ?";
+        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" WHERE course_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlCourse);
             ps.setInt(1, id);
@@ -134,7 +134,7 @@ public class CourseDAO extends DBContext {
         } catch (Exception ignored) {
         }
 
-        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES WHERE class_id = ?";
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlClasses);
             ps.setInt(1, id);
@@ -161,8 +161,8 @@ public class CourseDAO extends DBContext {
             return getAllCourses();
         }
         List<Course> list = new ArrayList<>();
-        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM COURSES "
-                         + "WHERE course_code LIKE ? OR course_name LIKE ? OR description LIKE ? ORDER BY course_id ASC";
+        String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" "
+                         + "WHERE course_code ILIKE ? OR course_name ILIKE ? OR description ILIKE ? ORDER BY course_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlCourse);
             String term = "%" + keyword.trim() + "%";
@@ -186,8 +186,8 @@ public class CourseDAO extends DBContext {
         } catch (Exception ignored) {
         }
 
-        String sqlClasses = "SELECT class_id, class_code, class_name FROM CLASSES "
-                         + "WHERE class_name LIKE ? OR class_code LIKE ? ORDER BY class_id ASC";
+        String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" "
+                         + "WHERE class_name ILIKE ? OR class_code ILIKE ? ORDER BY class_id ASC";
         try {
             PreparedStatement ps = connection.prepareStatement(sqlClasses);
             String term = "%" + keyword.trim() + "%";
@@ -220,8 +220,8 @@ public class CourseDAO extends DBContext {
     public List<Course> getCoursesByUserId(int userId) {
         List<Course> list = new ArrayList<>();
         String sql = "SELECT c.class_id, c.class_code, c.class_name "
-                   + "FROM CLASSES c "
-                   + "JOIN USER_CLASS uc ON c.class_id = uc.class_id "
+                   + "FROM \"CLASSES\" c "
+                   + "JOIN \"USER_CLASS\" uc ON c.class_id = uc.class_id "
                    + "WHERE uc.user_id = ? "
                    + "ORDER BY c.class_id ASC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -251,9 +251,9 @@ public class CourseDAO extends DBContext {
         }
         List<Course> list = new ArrayList<>();
         String sql = "SELECT c.class_id, c.class_code, c.class_name "
-                   + "FROM CLASSES c "
-                   + "JOIN USER_CLASS uc ON c.class_id = uc.class_id "
-                   + "WHERE uc.user_id = ? AND (c.class_name LIKE ? OR c.class_code LIKE ?) "
+                   + "FROM \"CLASSES\" c "
+                   + "JOIN \"USER_CLASS\" uc ON c.class_id = uc.class_id "
+                   + "WHERE uc.user_id = ? AND (c.class_name ILIKE ? OR c.class_code ILIKE ?) "
                    + "ORDER BY c.class_id ASC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             String term = "%" + keyword.trim() + "%";
@@ -287,7 +287,7 @@ public class CourseDAO extends DBContext {
      * 4. CREATE: Thêm lớp môn học mới vào bảng CLASSES
      */
     public boolean insertCourse(Course c) {
-        String sql = "INSERT INTO CLASSES (class_code, class_name) VALUES (?, ?)";
+        String sql = "INSERT INTO \"CLASSES\" (class_code, class_name) VALUES (?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             // class_code: mã lớp (nếu chưa có thì tạo mặc định), class_name: mã môn học
@@ -304,7 +304,7 @@ public class CourseDAO extends DBContext {
      * 5. UPDATE: Cập nhật thông tin mã môn trong bảng CLASSES
      */
     public boolean updateCourse(Course c) {
-        String sql = "UPDATE CLASSES SET class_name = ? WHERE class_id = ?";
+        String sql = "UPDATE \"CLASSES\" SET class_name = ? WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, c.getCourseCode());
@@ -320,7 +320,7 @@ public class CourseDAO extends DBContext {
      * 6. DELETE: Xóa lớp học theo class_id
      */
     public boolean deleteCourse(int id) {
-        String sql = "DELETE FROM CLASSES WHERE class_id = ?";
+        String sql = "DELETE FROM \"CLASSES\" WHERE class_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, id);
@@ -351,7 +351,7 @@ public class CourseDAO extends DBContext {
      * Hàm test độc lập từng hàm trong CourseDAO (Unit Test)
      */
     public static void main(String[] args) {
-        System.out.println("========== BẮT ĐẦU TEST CourseDAO VỚI BẢNG CLASSES ==========\n");
+        System.out.println("========== BẮT ĐẦU TEST CourseDAO VỚI BẢNG \"CLASSES\" ==========\n");
         CourseDAO dao = new CourseDAO();
 
         List<Course> all = dao.getAllCourses();

@@ -428,7 +428,7 @@
 
         <div class="info-alert">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Dữ liệu kết nối SQL Server thời gian thực &bull; Cổng học tập EduNext
+            Dữ liệu kết nối PostgreSQL thời gian thực &bull; Cổng học tập EduNext
         </div>
 
         <!-- Layout Body -->

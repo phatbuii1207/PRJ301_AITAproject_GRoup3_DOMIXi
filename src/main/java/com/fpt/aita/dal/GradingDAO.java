@@ -15,7 +15,7 @@ public final class GradingDAO implements AutoCloseable {
     }
 
     public Assignment findAssignment(int id) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM ASSIGNMENTS WHERE assignment_id=?")) {
+        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM \"ASSIGNMENTS\" WHERE assignment_id=?")) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -28,7 +28,7 @@ public final class GradingDAO implements AutoCloseable {
     }
 
     public Submission findSubmission(int id) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM SUBMISSIONS WHERE submission_id=?")) {
+        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM \"SUBMISSIONS\" WHERE submission_id=?")) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -41,15 +41,15 @@ public final class GradingDAO implements AutoCloseable {
     }
 
     public boolean isCourseMember(int userId, int courseId) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM USER_CLASS WHERE user_id=? AND class_id=?")) {
+        try (PreparedStatement ps = connection.prepareStatement("SELECT 1 FROM \"USER_CLASS\" WHERE user_id=? AND class_id=?")) {
             ps.setInt(1, userId); ps.setInt(2, courseId);
             try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
         }
     }
 
     public GradingConfig loadConfig(int assignmentId) throws SQLException {
-        String sql = "SELECT c.main_class,c.config_version,t.* FROM GRADING_CONFIGS c "
-                + "LEFT JOIN GRADING_TEST_CASES t ON c.assignment_id=t.assignment_id WHERE c.assignment_id=? ORDER BY t.case_order";
+        String sql = "SELECT c.main_class,c.config_version,t.* FROM \"GRADING_CONFIGS\" c "
+                + "LEFT JOIN \"GRADING_TEST_CASES\" t ON c.assignment_id=t.assignment_id WHERE c.assignment_id=? ORDER BY t.case_order";
         List<GradingTestCase> tests = new ArrayList<>();
         String main = null; int version = 0;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -67,22 +67,26 @@ public final class GradingDAO implements AutoCloseable {
     public void saveConfig(int assignmentId, GradingConfig config) throws SQLException {
         connection.setAutoCommit(false);
         try {
+            // PostgreSQL row locks cannot lock a missing config row. Serialize initial saves too.
+            try (PreparedStatement lock = connection.prepareStatement("SELECT pg_advisory_xact_lock(301, ?)")) {
+                lock.setInt(1, assignmentId); lock.execute();
+            }
             int version = 0;
             try (PreparedStatement ps = connection.prepareStatement(
-                    "SELECT config_version FROM GRADING_CONFIGS WITH (UPDLOCK,HOLDLOCK) WHERE assignment_id=?")) {
+                    "SELECT config_version FROM \"GRADING_CONFIGS\" WHERE assignment_id=? FOR UPDATE")) {
                 ps.setInt(1, assignmentId);
                 try (ResultSet rs = ps.executeQuery()) { if (rs.next()) version = rs.getInt(1); }
             }
             if (version != config.getVersion()) throw new IllegalArgumentException("Bộ test đã được sửa. Tải lại trang trước khi lưu.");
-            String sql = version == 0 ? "INSERT INTO GRADING_CONFIGS(main_class,config_version,assignment_id) VALUES(?,?,?)"
-                    : "UPDATE GRADING_CONFIGS SET main_class=?,config_version=? WHERE assignment_id=?";
+            String sql = version == 0 ? "INSERT INTO \"GRADING_CONFIGS\"(main_class,config_version,assignment_id) VALUES(?,?,?)"
+                    : "UPDATE \"GRADING_CONFIGS\" SET main_class=?,config_version=? WHERE assignment_id=?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setString(1, config.getMainClass()); ps.setInt(2, version + 1); ps.setInt(3, assignmentId); ps.executeUpdate();
             }
-            try (PreparedStatement ps = connection.prepareStatement("DELETE FROM GRADING_TEST_CASES WHERE assignment_id=?")) {
+            try (PreparedStatement ps = connection.prepareStatement("DELETE FROM \"GRADING_TEST_CASES\" WHERE assignment_id=?")) {
                 ps.setInt(1, assignmentId); ps.executeUpdate();
             }
-            try (PreparedStatement ps = connection.prepareStatement("INSERT INTO GRADING_TEST_CASES "
+            try (PreparedStatement ps = connection.prepareStatement("INSERT INTO \"GRADING_TEST_CASES\" "
                     + "(assignment_id,case_order,case_name,stdin_text,expected_output,weight,is_hidden) VALUES(?,?,?,?,?,?,?)")) {
                 int n = 0;
                 for (GradingTestCase t : config.getTests()) {
@@ -96,7 +100,7 @@ public final class GradingDAO implements AutoCloseable {
     }
 
     public void updateStatus(int submissionId, String status) throws SQLException {
-        try (PreparedStatement ps = connection.prepareStatement("UPDATE SUBMISSIONS SET status=? WHERE submission_id=?")) {
+        try (PreparedStatement ps = connection.prepareStatement("UPDATE \"SUBMISSIONS\" SET status=? WHERE submission_id=?")) {
             ps.setString(1, status); ps.setInt(2, submissionId);
             if (ps.executeUpdate() != 1) throw new SQLException("Không tìm thấy bài nộp.");
         }
@@ -105,21 +109,21 @@ public final class GradingDAO implements AutoCloseable {
     public void saveReport(int submissionId, GradingReport report) throws SQLException {
         connection.setAutoCommit(false);
         try {
-            try (PreparedStatement ps = connection.prepareStatement("DELETE FROM GRADING_CASE_RESULTS WHERE submission_id=?")) {
+            try (PreparedStatement ps = connection.prepareStatement("DELETE FROM \"GRADING_CASE_RESULTS\" WHERE submission_id=?")) {
                 ps.setInt(1, submissionId); ps.executeUpdate();
             }
             int updated;
-            try (PreparedStatement ps = connection.prepareStatement("UPDATE GRADING_REPORTS SET main_class=?,config_version=?,"
-                    + "verdict=?,score=?,message=?,graded_at=SYSUTCDATETIME() WHERE submission_id=?")) {
+            try (PreparedStatement ps = connection.prepareStatement("UPDATE \"GRADING_REPORTS\" SET main_class=?,config_version=?,"
+                    + "verdict=?,score=?,message=?,graded_at=timezone('UTC', CURRENT_TIMESTAMP) WHERE submission_id=?")) {
                 bindReport(ps, submissionId, report); updated = ps.executeUpdate();
             }
             if (updated == 0) {
-                try (PreparedStatement ps = connection.prepareStatement("INSERT INTO GRADING_REPORTS "
+                try (PreparedStatement ps = connection.prepareStatement("INSERT INTO \"GRADING_REPORTS\" "
                         + "(main_class,config_version,verdict,score,message,submission_id) VALUES(?,?,?,?,?,?)")) {
                     bindReport(ps, submissionId, report); ps.executeUpdate();
                 }
             }
-            try (PreparedStatement ps = connection.prepareStatement("INSERT INTO GRADING_CASE_RESULTS "
+            try (PreparedStatement ps = connection.prepareStatement("INSERT INTO \"GRADING_CASE_RESULTS\" "
                     + "(submission_id,case_order,case_name,stdin_text,expected_output,weight,is_hidden,verdict,actual_output,diagnostics,execution_time_ms) "
                     + "VALUES(?,?,?,?,?,?,?,?,?,?,?)")) {
                 for (GradingCaseResult c : report.getCases()) {
@@ -138,7 +142,7 @@ public final class GradingDAO implements AutoCloseable {
 
     public GradingReport loadReport(int submissionId) throws SQLException {
         String verdict, main, message; int version; java.math.BigDecimal score;
-        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM GRADING_REPORTS WHERE submission_id=?")) {
+        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM \"GRADING_REPORTS\" WHERE submission_id=?")) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
@@ -147,7 +151,7 @@ public final class GradingDAO implements AutoCloseable {
             }
         }
         List<GradingCaseResult> cases = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM GRADING_CASE_RESULTS WHERE submission_id=? ORDER BY case_order")) {
+        try (PreparedStatement ps = connection.prepareStatement("SELECT * FROM \"GRADING_CASE_RESULTS\" WHERE submission_id=? ORDER BY case_order")) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) cases.add(new GradingCaseResult(rs.getInt("case_order"), testFrom(rs),

@@ -1,5 +1,7 @@
 # Kiểm tra lại logic chấm bài
 
+> Biên bản lịch sử trước khi đổi database. Hệ thống hiện dùng PostgreSQL; xem [kiểm chứng mới](POSTGRESQL_VERIFICATION.md).
+
 Lượt kiểm tra: 2026-11-04 21:39 (local). Không sửa logic production, không commit/push.
 
 ## Tự động

@@ -399,8 +399,8 @@ public class AstAnalyzerService {
                 + "Đề xuất chuyển đổi thuật toán vét cạn sang sử dụng bảng băm (HashSet/HashMap) "
                 + "để giảm độ phức tạp thời gian từ O(N^2) xuống O(N).";
 
-        String sql = "INSERT INTO AI_OPTIMIZATIONS (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
-                   + "VALUES (?, ?, ?, ?, 'O(N)', GETDATE())";
+        String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
+                   + "VALUES (?, ?, ?, ?, 'O(N)', LOCALTIMESTAMP)";
         try (java.sql.PreparedStatement ps = reportDAO.getConnection().prepareStatement(sql)) {
             ps.setInt(1, methodId);
             ps.setString(2, originalCode);

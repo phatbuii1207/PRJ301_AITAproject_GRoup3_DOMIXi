@@ -355,7 +355,7 @@ public class CourseDetailServlet extends HttpServlet {
                             }
                         } catch (Exception ignored) {}
 
-                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL SQL Server với trạng thái Pending (Đưa vào Hàng đợi)
+                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL PostgreSQL với trạng thái Pending (Đưa vào Hàng đợi)
                         Submission sub = new Submission();
                         sub.setStudentId(currentUser.getUserId());
                         sub.setAssignmentId(assignmentId);
@@ -448,7 +448,7 @@ public class CourseDetailServlet extends HttpServlet {
             case 4:
                 c.put("code", "DBI202");
                 c.put("name", "Introduction to Databases");
-                c.put("description", "Cơ sở dữ liệu quan hệ, SQL Server T-SQL, Chuẩn hóa 1NF/2NF/3NF, Index.");
+                c.put("description", "Cơ sở dữ liệu quan hệ, PostgreSQL T-SQL, Chuẩn hóa 1NF/2NF/3NF, Index.");
                 c.put("totalSlots", 30);
                 break;
             default:

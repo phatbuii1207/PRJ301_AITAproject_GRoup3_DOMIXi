@@ -12,10 +12,10 @@ import java.util.Map;
 public class SubmissionDAO extends DBContext {
 
     /**
-     * Thêm mới một bản ghi nộp bài của sinh viên vào CSDL SQL Server (trả về submission_id tự tăng)
+     * Thêm mới một bản ghi nộp bài của sinh viên vào CSDL PostgreSQL (trả về submission_id tự tăng)
      */
     public boolean insertSubmission(Submission s) {
-        String sql = "INSERT INTO SUBMISSIONS (student_id, assignment_id, file_path, sha256_hash, file_size, submitted_at, status) "
+        String sql = "INSERT INTO \"SUBMISSIONS\" (student_id, assignment_id, file_path, sha256_hash, file_size, submitted_at, status) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try {
             PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
@@ -45,7 +45,7 @@ public class SubmissionDAO extends DBContext {
      * Dùng cho Hàng đợi chấm bài (Grading Queue)
      */
     public boolean updateSubmissionStatus(int submissionId, String status) {
-        String sql = "UPDATE SUBMISSIONS SET status = ? WHERE submission_id = ?";
+        String sql = "UPDATE \"SUBMISSIONS\" SET status = ? WHERE submission_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, status);
@@ -61,13 +61,13 @@ public class SubmissionDAO extends DBContext {
      * Lấy bài nộp gần nhất của sinh viên cho một bài tập cụ thể
      */
     public Submission getLatestSubmission(int studentId, int assignmentId) {
-        String sql = "SELECT TOP 1 s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
+        String sql = "SELECT s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
                    + "s.file_path, s.sha256_hash, s.file_size, s.submitted_at, s.status "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "LEFT JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.student_id = ? AND s.assignment_id = ? "
-                   + "ORDER BY s.submitted_at DESC";
+                   + "ORDER BY s.submitted_at DESC LIMIT 1";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setInt(1, studentId);
@@ -100,9 +100,9 @@ public class SubmissionDAO extends DBContext {
         Map<Integer, Submission> map = new HashMap<>();
         String sql = "SELECT s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
                    + "s.file_path, s.sha256_hash, s.file_size, s.submitted_at, s.status "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.student_id = ? AND a.course_id = ? "
                    + "ORDER BY s.submitted_at ASC";
         try {
@@ -138,9 +138,9 @@ public class SubmissionDAO extends DBContext {
         List<Submission> list = new ArrayList<>();
         String sql = "SELECT s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
                    + "s.file_path, s.sha256_hash, s.file_size, s.submitted_at, s.status "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.assignment_id = ? "
                    + "ORDER BY s.submitted_at DESC";
         try {
@@ -173,9 +173,9 @@ public class SubmissionDAO extends DBContext {
     public Submission getSubmissionById(int submissionId) {
         String sql = "SELECT s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
                    + "s.file_path, s.sha256_hash, s.file_size, s.submitted_at, s.status "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "LEFT JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.submission_id = ?";
         try {
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -208,9 +208,9 @@ public class SubmissionDAO extends DBContext {
         Map<Integer, List<Submission>> map = new HashMap<>();
         String sql = "SELECT s.submission_id, s.student_id, u.full_name, s.assignment_id, a.title, "
                    + "s.file_path, s.sha256_hash, s.file_size, s.submitted_at, s.status "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE a.course_id = ? "
                    + "ORDER BY s.submitted_at DESC";
         try {

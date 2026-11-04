@@ -2,7 +2,7 @@ package com.fpt.aita.ai;
 
 /**
  * Cấu hình cho module AI (Gemini / Mock).
- * Đọc cấu hình từ System.getenv(key), nếu không có thì đọc System.getProperty(key).
+ * Đọc biến môi trường, JVM property, rồi file .env theo AppConfig.
  */
 public class AiConfig {
 
@@ -29,21 +29,14 @@ public class AiConfig {
     }
 
     /**
-     * Đọc giá trị cấu hình từ System.getenv, nếu null thì fallback sang System.getProperty.
+     * Đọc cấu hình chung và giữ quy tắc trim của module AI.
      *
      * @param key tên biến môi trường hoặc system property
      * @param defaultValue giá trị mặc định nếu không tìm thấy hoặc rỗng
      * @return giá trị cấu hình đã được trim
      */
     private String readConfig(String key, String defaultValue) {
-        String val = System.getenv(key);
-        if (val == null || val.trim().isEmpty()) {
-            val = System.getProperty(key);
-        }
-        if (val == null || val.trim().isEmpty()) {
-            return defaultValue;
-        }
-        return val.trim();
+        return com.fpt.aita.config.AppConfig.get(key, defaultValue).trim();
     }
 
     /**

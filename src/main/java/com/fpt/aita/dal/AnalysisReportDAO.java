@@ -25,10 +25,10 @@ public class AnalysisReportDAO extends DBContext {
         String sql = "SELECT ar.report_id, ar.submission_id, ar.quality_score, ar.total_issues, ar.created_at, "
                    + "       s.student_id, u.full_name AS student_name, u.username AS student_username, "
                    + "       s.assignment_id, a.title AS assignment_title, s.file_path, s.file_size, s.submitted_at, s.status AS submission_status "
-                   + "FROM ANALYSIS_REPORTS ar "
-                   + "JOIN SUBMISSIONS s ON ar.submission_id = s.submission_id "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "LEFT JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"ANALYSIS_REPORTS\" ar "
+                   + "JOIN \"SUBMISSIONS\" s ON ar.submission_id = s.submission_id "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE ar.submission_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
@@ -53,10 +53,10 @@ public class AnalysisReportDAO extends DBContext {
         String sql = "SELECT ar.report_id, ar.submission_id, ar.quality_score, ar.total_issues, ar.created_at, "
                    + "       s.student_id, u.full_name AS student_name, u.username AS student_username, "
                    + "       s.assignment_id, a.title AS assignment_title, s.file_path, s.file_size, s.submitted_at, s.status AS submission_status "
-                   + "FROM ANALYSIS_REPORTS ar "
-                   + "JOIN SUBMISSIONS s ON ar.submission_id = s.submission_id "
-                   + "JOIN USERS u ON s.student_id = u.user_id "
-                   + "LEFT JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
+                   + "FROM \"ANALYSIS_REPORTS\" ar "
+                   + "JOIN \"SUBMISSIONS\" s ON ar.submission_id = s.submission_id "
+                   + "JOIN \"USERS\" u ON s.student_id = u.user_id "
+                   + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE ar.report_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, reportId);
@@ -83,11 +83,11 @@ public class AnalysisReportDAO extends DBContext {
         String sql = "SELECT i.issue_id, i.file_id, sf.file_name, i.method_id, m.method_name, "
                    + "       i.rule_id, r.rule_code, r.name AS rule_name, r.category, "
                    + "       i.line_number, i.severity, i.message, i.ai_explanation "
-                   + "FROM ISSUES i "
-                   + "JOIN SOURCE_FILES sf ON i.file_id = sf.file_id "
-                   + "JOIN ANALYSIS_REPORTS ar ON sf.submission_id = ar.submission_id "
-                   + "JOIN RULES r ON i.rule_id = r.rule_id "
-                   + "LEFT JOIN METHODS m ON i.method_id = m.method_id "
+                   + "FROM \"ISSUES\" i "
+                   + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
+                   + "JOIN \"ANALYSIS_REPORTS\" ar ON sf.submission_id = ar.submission_id "
+                   + "JOIN \"RULES\" r ON i.rule_id = r.rule_id "
+                   + "LEFT JOIN \"METHODS\" m ON i.method_id = m.method_id "
                    + "WHERE ar.report_id = ? "
                    + "ORDER BY "
                    + "    CASE i.severity "
@@ -119,10 +119,10 @@ public class AnalysisReportDAO extends DBContext {
         String sql = "SELECT i.issue_id, i.file_id, sf.file_name, i.method_id, m.method_name, "
                    + "       i.rule_id, r.rule_code, r.name AS rule_name, r.category, "
                    + "       i.line_number, i.severity, i.message, i.ai_explanation "
-                   + "FROM ISSUES i "
-                   + "JOIN SOURCE_FILES sf ON i.file_id = sf.file_id "
-                   + "JOIN RULES r ON i.rule_id = r.rule_id "
-                   + "LEFT JOIN METHODS m ON i.method_id = m.method_id "
+                   + "FROM \"ISSUES\" i "
+                   + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
+                   + "JOIN \"RULES\" r ON i.rule_id = r.rule_id "
+                   + "LEFT JOIN \"METHODS\" m ON i.method_id = m.method_id "
                    + "WHERE sf.submission_id = ? "
                    + "ORDER BY "
                    + "    CASE i.severity "
@@ -154,10 +154,10 @@ public class AnalysisReportDAO extends DBContext {
         String sql = "SELECT o.optimization_id, o.method_id, m.method_name, sf.file_name, "
                    + "       o.original_code, o.optimized_code, o.explanation, o.created_at, "
                    + "       m.estimated_complexity, o.new_complexity "
-                   + "FROM AI_OPTIMIZATIONS o "
-                   + "JOIN METHODS m ON o.method_id = m.method_id "
-                   + "JOIN SOURCE_FILES sf ON m.file_id = sf.file_id "
-                   + "JOIN ANALYSIS_REPORTS ar ON sf.submission_id = ar.submission_id "
+                   + "FROM \"AI_OPTIMIZATIONS\" o "
+                   + "JOIN \"METHODS\" m ON o.method_id = m.method_id "
+                   + "JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
+                   + "JOIN \"ANALYSIS_REPORTS\" ar ON sf.submission_id = ar.submission_id "
                    + "WHERE ar.report_id = ? "
                    + "ORDER BY o.optimization_id ASC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -202,7 +202,7 @@ public class AnalysisReportDAO extends DBContext {
      * Kiểm tra xem bài nộp đã có báo cáo phân tích hay chưa
      */
     public boolean hasReport(int submissionId) {
-        String sql = "SELECT 1 FROM ANALYSIS_REPORTS WHERE submission_id = ?";
+        String sql = "SELECT 1 FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -220,9 +220,9 @@ public class AnalysisReportDAO extends DBContext {
     public Map<Integer, Boolean> getReportsStatusMapByCourse(int courseId) {
         Map<Integer, Boolean> map = new HashMap<>();
         String sql = "SELECT s.submission_id, CASE WHEN ar.report_id IS NOT NULL THEN 1 ELSE 0 END AS has_report "
-                   + "FROM SUBMISSIONS s "
-                   + "JOIN ASSIGNMENTS a ON s.assignment_id = a.assignment_id "
-                   + "LEFT JOIN ANALYSIS_REPORTS ar ON s.submission_id = ar.submission_id "
+                   + "FROM \"SUBMISSIONS\" s "
+                   + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
+                   + "LEFT JOIN \"ANALYSIS_REPORTS\" ar ON s.submission_id = ar.submission_id "
                    + "WHERE a.course_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
@@ -246,8 +246,8 @@ public class AnalysisReportDAO extends DBContext {
                          + "    COUNT(CASE WHEN i.severity = 'Critical' THEN 1 END) AS crit_cnt, "
                          + "    COUNT(CASE WHEN i.severity = 'Warning' THEN 1 END) AS warn_cnt, "
                          + "    COUNT(CASE WHEN i.severity = 'Info' THEN 1 END) AS info_cnt "
-                         + "FROM ISSUES i "
-                         + "JOIN SOURCE_FILES sf ON i.file_id = sf.file_id "
+                         + "FROM \"ISSUES\" i "
+                         + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
                          + "WHERE sf.submission_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sqlIssues)) {
             ps.setInt(1, r.getSubmissionId());
@@ -260,7 +260,7 @@ public class AnalysisReportDAO extends DBContext {
             }
         } catch (SQLException ignored) {}
 
-        String sqlLoc = "SELECT ISNULL(SUM(loc), 0) AS total_loc FROM SOURCE_FILES WHERE submission_id = ?";
+        String sqlLoc = "SELECT COALESCE(SUM(loc), 0) AS total_loc FROM \"SOURCE_FILES\" WHERE submission_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sqlLoc)) {
             ps.setInt(1, r.getSubmissionId());
             try (ResultSet rs = ps.executeQuery()) {
@@ -349,7 +349,7 @@ public class AnalysisReportDAO extends DBContext {
         list.add(new Issue(3, 1, "ArrayDuplicateFinder.java", 8, "getAllUsersLeak", 
             4, "RULE_SMELL_RESOURCE_LEAK", "Không đóng tài nguyên kết nối Database", "Code Smells", 
             110, "Info", "Không đóng Connection và ResultSet trong khối try-with-resources", 
-            "Kết nối JDBC không được đóng đúng cách sẽ gây rò rỉ bộ nhớ (memory leak) và cạn kiệt connection pool của SQL Server khi có nhiều request đồng thời."));
+            "Kết nối JDBC không được đóng đúng cách sẽ gây rò rỉ bộ nhớ (memory leak) và cạn kiệt connection pool của PostgreSQL khi có nhiều request đồng thời."));
         return list;
     }
 
@@ -384,7 +384,7 @@ public class AnalysisReportDAO extends DBContext {
     // =========================================================================
 
     public int insertSourceFile(int submissionId, String fileName, int loc) {
-        String sql = "INSERT INTO SOURCE_FILES (submission_id, file_name, file_type, loc) VALUES (?, ?, 'java', ?)";
+        String sql = "INSERT INTO \"SOURCE_FILES\" (submission_id, file_name, file_type, loc) VALUES (?, ?, 'java', ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, submissionId);
             ps.setString(2, fileName);
@@ -403,7 +403,7 @@ public class AnalysisReportDAO extends DBContext {
 
     public int insertMethod(int fileId, String methodName, int startLine, int endLine,
                             int loopDepth, int cyclomaticComplexity, String estimatedComplexity, boolean isRecursive) {
-        String sql = "INSERT INTO METHODS (file_id, method_name, start_line, end_line, loop_depth, "
+        String sql = "INSERT INTO \"METHODS\" (file_id, method_name, start_line, end_line, loop_depth, "
                    + "cyclomatic_complexity, estimated_complexity, is_recursive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, fileId);
@@ -427,7 +427,7 @@ public class AnalysisReportDAO extends DBContext {
     }
 
     public int getRuleIdByCode(String ruleCode) {
-        String sql = "SELECT rule_id FROM RULES WHERE rule_code = ?";
+        String sql = "SELECT rule_id FROM \"RULES\" WHERE rule_code = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, ruleCode);
             try (ResultSet rs = ps.executeQuery()) {
@@ -441,7 +441,7 @@ public class AnalysisReportDAO extends DBContext {
 
     public boolean insertIssue(int fileId, Integer methodId, int ruleId, int lineNumber,
                                String severity, String message, String aiExplanation) {
-        String sql = "INSERT INTO ISSUES (file_id, method_id, rule_id, line_number, severity, message, ai_explanation) "
+        String sql = "INSERT INTO \"ISSUES\" (file_id, method_id, rule_id, line_number, severity, message, ai_explanation) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, fileId);
@@ -463,14 +463,14 @@ public class AnalysisReportDAO extends DBContext {
     }
 
     public int insertAnalysisReport(int submissionId, int qualityScore, int totalIssues) {
-        String deleteSql = "DELETE FROM ANALYSIS_REPORTS WHERE submission_id = ?";
+        String deleteSql = "DELETE FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(deleteSql)) {
             ps.setInt(1, submissionId);
             ps.executeUpdate();
         } catch (SQLException ignored) {}
 
-        String sql = "INSERT INTO ANALYSIS_REPORTS (submission_id, quality_score, total_issues, created_at) "
-                   + "VALUES (?, ?, ?, GETDATE())";
+        String sql = "INSERT INTO \"ANALYSIS_REPORTS\" (submission_id, quality_score, total_issues, created_at) "
+                   + "VALUES (?, ?, ?, LOCALTIMESTAMP)";
         try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, submissionId);
             ps.setInt(2, qualityScore);
@@ -488,8 +488,8 @@ public class AnalysisReportDAO extends DBContext {
     }
 
     public void cleanOldAnalysisData(int submissionId) {
-        try (PreparedStatement ps1 = connection.prepareStatement("DELETE FROM SOURCE_FILES WHERE submission_id = ?");
-             PreparedStatement ps2 = connection.prepareStatement("DELETE FROM ANALYSIS_REPORTS WHERE submission_id = ?")) {
+        try (PreparedStatement ps1 = connection.prepareStatement("DELETE FROM \"SOURCE_FILES\" WHERE submission_id = ?");
+             PreparedStatement ps2 = connection.prepareStatement("DELETE FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?")) {
             ps1.setInt(1, submissionId);
             ps1.executeUpdate();
             ps2.setInt(1, submissionId);

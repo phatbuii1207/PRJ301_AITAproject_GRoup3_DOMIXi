@@ -1,0 +1,151 @@
+# PostgreSQL cho cả nhóm AITA
+
+Ứng dụng dùng Java 8, Tomcat 9 và PostgreSQL JDBC 42.7.14. Thành viên chạy web
+không cần cài Docker để kết nối database. Docker chỉ cần trên máy thực thi sandbox
+nếu muốn chấm bài bằng test case; đăng nhập, CRUD và kết nối JDBC dùng PostgreSQL trực tiếp.
+
+## 1. Cài database không dùng Docker
+
+Cài PostgreSQL 16 và pgAdmin (Windows/macOS/Linux), hoặc dùng PostgreSQL chung
+trên server/cloud. Trong pgAdmin/DBeaver, tạo database tên chính xác
+`AST_CodeAnalysisDB`, UTF-8, rồi kết nối vào database mới.
+
+Chạy toàn bộ **AITA_Database.sql** bằng chức năng Execute SQL Script.
+File tạo đủ 15 bảng, 93 cột, PK/FK, index và seed mẫu; không chứa DROP DATABASE/TABLE.
+Seed chỉ chạy khi toàn bộ 11 bảng nghiệp vụ gốc rỗng; chạy lại không nhân đôi dữ liệu.
+Database có dữ liệu sẽ không bị trộn thêm seed. Không dùng seed thay cho migrate dữ liệu thật.
+
+Có thể tách riêng:
+
+- `database/postgresql/schema.sql`: chỉ cấu trúc.
+- `database/postgresql/seed.sql`: dữ liệu demo, chỉ dành database rỗng.
+- `database/migrations/`: migration PostgreSQL bổ sung, đã nằm trong schema đầy đủ.
+- `mock_analysis_report_data.sql`: fixture giao diện tùy chọn, sửa bài demo ID 1/3/5;
+  **chỉ chạy trên database demo**, không chạy trên dữ liệu thật/chung.
+- `database/sqlserver/`: script cũ được giữ để tham khảo/khôi phục hệ thống SQL Server,
+  không chạy chúng trên PostgreSQL.
+
+Nếu có Python 3 và `psql` trong PATH, sau khi tạo database/cấu hình `.env`:
+
+```bash
+python3 scripts/setup_postgres.py
+# Hoặc Linux/macOS:
+./setup_database.sh
+# Chỉ cấu trúc để chuẩn bị migrate dữ liệu thật:
+python3 scripts/setup_postgres.py --schema-only
+```
+
+## 2. JDBC và NetBeans/Tomcat
+
+Copy `.env.example` thành `.env`, điền thông tin riêng, không commit file `.env`:
+
+```dotenv
+DB_URL=jdbc:postgresql://localhost:5432/AST_CodeAnalysisDB
+DB_USER=aita
+DB_PASSWORD=your-local-password
+```
+
+Role `aita` là ví dụ: tạo role/đặt password bằng pgAdmin và cấp ownership database,
+hoặc dùng tài khoản PostgreSQL đã được quản trị viên cấp. Địa chỉ trên không tạo
+role/database tự động. Khi chưa có DB_URL, ứng dụng ghép DB_HOST/DB_PORT/DB_NAME.
+
+Ưu tiên cấu hình: biến môi trường → JVM system property → `.env` → mặc định.
+NetBeans: Server Properties → Platform → VM Options, thêm
+`-Daita.env.file=/đường/dẫn/tuyệt/đối/project/.env`
+(Windows ví dụ `-Daita.env.file=C:/AITA/.env`; đường dẫn có khoảng trắng cần đặt trong dấu nháy).
+Khởi động lại Tomcat sau khi đổi cấu hình. Có thể đặt biến môi trường
+`AITA_ENV_FILE` trỏ tới file thay cho VM option. Nếu không chỉ định, `.env` được
+đọc từ thư mục làm việc của tiến trình Tomcat, có thể khác thư mục project.
+
+Các thành viên dùng chung database chỉ cần cùng DB_URL/DB_USER hoặc account riêng
+được cấp quyền. **Không dùng localhost của bạn để máy khác kết nối**: dùng DNS/IP
+server, cấu hình truy cập PostgreSQL/firewall và SSL theo nhà cung cấp.
+Azure phải là **Azure Database for PostgreSQL**, URL ví dụ
+`jdbc:postgresql://<server>:5432/AST_CodeAnalysisDB?sslmode=require`.
+Chưa tự tạo/deploy dịch vụ Azure trong lần chuyển đổi này.
+
+Build WAR mới bằng `mvn clean package`; dùng WAR mới với Tomcat 9.
+Driver PostgreSQL có trong WAR; driver SQL Server không nằm trong bản build thường.
+Không cần sửa DBContext.java theo từng máy.
+
+DBeaver: chọn driver **PostgreSQL**, điền host, port, database, user và password
+cùng cấu hình trên. Tên bảng viết hoa được giữ nguyên có dấu nháy:
+
+```sql
+SELECT * FROM "USERS";
+SELECT submission_id, status FROM "SUBMISSIONS";
+```
+
+Không viết `SELECT * FROM USERS` vì PostgreSQL sẽ chuyển tên không quote thành chữ thường.
+Tên cột, Java model, khóa/quan hệ và ý nghĩa thuộc tính được giữ nguyên.
+
+## 3. Máy hiện tại và Docker tùy chọn
+
+Máy thực hiện chuyển đổi đã có dịch vụ khác chiếm cổng 5432. Database AITA hiện
+chạy PostgreSQL 16 ở **localhost:55433**, database **AST_CodeAnalysisDB**, user
+**aita**; password trong `.env` riêng. Docker ở đây chỉ là cách dựng server cục bộ.
+Các máy khác có thể dùng PostgreSQL cài trực tiếp hoặc server chung.
+Tomcat trên máy hiện tại đã đọc `.env` qua `bin/setenv.sh`, ứng dụng mới đang ở
+`http://localhost:8080/AITA_StaticCodeAnalysis/login`. File setenv và password chỉ nằm trên máy local;
+trên máy khác đặt AITA_ENV_FILE/VM option theo mục 2.
+
+Nếu chủ động muốn dùng Docker: cấu hình DB_PORT=55433, DB_USER, DB_PASSWORD,
+DB_NAME trong `.env` (DB_URL cũng phải trỏ tới cùng port), rồi `docker compose up -d postgres`. Schema không tự import:
+chạy setup sau khi database sẵn sàng. Không dùng `down -v` nếu cần giữ dữ liệu.
+SQL Server nguồn được giữ nguyên, không xóa container/volume nguồn.
+
+File bài nộp vẫn được lưu trên filesystem máy chạy Tomcat theo cấu hình upload;
+PostgreSQL lưu `file_path`, hash và metadata. Chuyển database không tự di chuyển ZIP.
+Nếu triển khai nhiều máy/web server, cần thiết kế storage dùng chung riêng.
+
+## 4. Kiểu dữ liệu và migrate dữ liệu SQL Server thật
+
+| SQL Server | PostgreSQL | Ghi chú |
+|---|---|---|
+| int IDENTITY | int GENERATED BY DEFAULT AS IDENTITY | Giữ ID hiện có; đồng bộ sequence |
+| nvarchar(n) | varchar(n) | UTF-8, giữ giới hạn n ký tự |
+| nvarchar(max) | text | Giữ nội dung Unicode |
+| bit | boolean | JDBC setBoolean/getBoolean |
+| datetime/datetime2 | timestamp without time zone | Giữ giá trị thời gian không gắn timezone |
+| decimal(p,s) | numeric(p,s) | Giữ precision/scale |
+
+PostgreSQL timestamp có tối đa 6 chữ số phần giây; datetime2 chính xác 7 chữ số
+được làm tròn microsecond khi chuyển. Timestamp nguồn hiện có đã được đối chiếu
+sau cùng quy tắc này. Grading vẫn lưu UTC, các ngày nghiệp vụ giữ quy ước cũ.
+Index lower(username/class_code/rule_code) giữ uniqueness không phân biệt hoa/thường;
+login/lookup username dùng LOWER và tìm kiếm môn dùng ILIKE. PostgreSQL không mô phỏng
+toàn bộ quy tắc collation tiếng Việt của SQL Server.
+
+Dữ liệu thật đã chuyển và so sánh 15 bảng/93 cột, nullable, identity, PK/FK/cascade,
+số dòng và SHA-256 nội dung từng bảng; giữ nguyên ID/sequence nguồn.
+Biên bản máy local: `target/postgresql-migration-verification.json` (không chứa giá trị bản ghi).
+Database nguồn không bị ghi/xóa. Không đính kèm export dữ liệu người dùng vào Git.
+
+Để migrate một nguồn khác, dùng **database PostgreSQL mới, hoàn toàn rỗng**:
+
+1. Tạo target database, cấu hình DB_* và chạy setup `--schema-only`.
+2. Tạo file cấu hình riêng ngoài Git (quyền chỉ chủ sở hữu) chứa SOURCE_DB_URL,
+   SOURCE_DB_USER, SOURCE_DB_PASSWORD. Đặt biến AITA_MIGRATION_SOURCE_FILE trỏ tới đó.
+   URL nguồn dạng `jdbc:sqlserver://host:1433;databaseName=AST_CodeAnalysisDB;encrypt=true;trustServerCertificate=true`;
+   thiết lập trust/certificate đúng server triển khai.
+3. `mvn -Pmigrate-sqlserver test-compile dependency:build-classpath -Dmdep.outputFile=target/migration-classpath.txt`
+4. Chạy class `com.fpt.aita.tools.MigrateSqlServer` bằng classpath
+   `target/classes`, `target/test-classes` và nội dung file classpath ở trên (Linux ngăn `:`, Windows `;`).
+   Có thể chạy Java main từ IDE khi kích hoạt profile `migrate-sqlserver`.
+5. Chỉ chuyển ứng dụng sang target khi kết quả PASS. Helper từ chối target có dữ liệu,
+   kiểm tra trước cấu trúc và rollback bản ghi khi lỗi; không hỗ trợ merge hai database.
+
+Không nộp bài/sửa dữ liệu nguồn trong thời gian migrate để có ảnh chụp nhất quán.
+Nếu schema nguồn khác, helper dừng để xử lý rõ ràng, không tự bỏ cột/dữ liệu.
+
+## 5. Kiểm thử
+
+`mvn test` chạy unit test, không yêu cầu database/Docker. `mvn verify -Psandbox-it`
+chạy thêm thực thi container (cần image sandbox đã build). Kiểm thử JDBC riêng:
+
+1. Tạo database tạm có tên chứa `_test_`, ví dụ `aita_test_jdbc`, import schema + seed.
+2. Đặt DB_URL/DB_USER/DB_PASSWORD trỏ vào database tạm, `AITA_POSTGRES_TESTS=true`,
+   `AI_PROVIDER=mock` và `GEMINI_API_KEY` rỗng.
+3. Chạy `mvn verify -Ppostgres-it`. Test tạo/xóa dữ liệu riêng, kiểm tra generated ID,
+   Unicode, login, CRUD, boolean, config version/rollback, snapshot điểm và AST/AI mock.
+   Test từ chối database không có `_test_` trong tên. Chạy profile này trên DB demo tạm.
