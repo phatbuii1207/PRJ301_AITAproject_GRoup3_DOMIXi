@@ -12,6 +12,23 @@ Hệ thống Hỗ trợ Giảng viên và Sinh viên trong việc kiểm tra, đ
 - **Server:** Apache Tomcat 9.0.x
 - **IDE:** Apache NetBeans 17+ / JDK 1.8
 
+## Docker Sandbox cho bài nộp Java
+
+Bài ZIP Java được biên dịch/chạy trong container Java 8 non-root, không có mạng ra ngoài,
+giới hạn 128 MiB RAM, 0.5 CPU và 5 giây. Build image trước khi dùng:
+
+```bash
+docker build -t aita-sandbox:java8 docker/sandbox
+mvn clean verify -Psandbox-it
+```
+
+Xem [hướng dẫn Docker Sandbox](docs/DOCKER_SANDBOX.md) để cấu hình Tomcat, main class,
+đọc kết quả và demo ba tình huống bảo mật. `SUCCESS` xác nhận chạy thành công;
+chưa phải kết quả chấm đúng/sai đáp án.
+
+Tập báo cáo bằng [kịch bản thuyết trình, giải thích code và demo](docs/HUONG_DAN_BAO_CAO_SANDBOX.md):
+chạy `./scripts/demo-sandbox.sh all` để thử 7 ca và tạo ZIP mẫu dùng trên web.
+
 ## 🚀 Hướng dẫn Cài đặt & Chạy ứng dụng
 1. **Thiết lập Database:**
    - Mở SQL Server Management Studio (SSMS).
