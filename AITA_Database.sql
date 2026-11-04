@@ -171,6 +171,7 @@ CREATE TABLE [dbo].[AI_OPTIMIZATIONS](
     [original_code] [nvarchar](MAX) NOT NULL,
     [optimized_code] [nvarchar](MAX) NOT NULL,
     [explanation] [nvarchar](MAX) NOT NULL,
+    [new_complexity] [varchar](20) NULL, -- Độ phức tạp SAU khi AI tối ưu: 'O(1)', 'O(N)', 'O(N log N)'...
     [created_at] [datetime] NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY ([method_id]) REFERENCES [dbo].[METHODS]([method_id]) ON DELETE CASCADE
 );
