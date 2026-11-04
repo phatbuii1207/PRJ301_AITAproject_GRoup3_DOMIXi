@@ -218,14 +218,15 @@ public class AiOptimizationDAO extends DBContext {
         if (o == null || connection == null) {
             return false;
         }
-        String sql = "INSERT INTO [dbo].[AI_OPTIMIZATIONS] ([method_id], [original_code], [optimized_code], [explanation], [created_at]) "
-                + "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO [dbo].[AI_OPTIMIZATIONS] ([method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at]) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, o.getMethodId());
             ps.setString(2, o.getOriginalCode());
             ps.setString(3, o.getOptimizedCode());
             ps.setString(4, o.getExplanation());
-            ps.setTimestamp(5, o.getCreatedAt() != null ? o.getCreatedAt() : new Timestamp(System.currentTimeMillis()));
+            ps.setString(5, o.getComplexityAfter());
+            ps.setTimestamp(6, o.getCreatedAt() != null ? o.getCreatedAt() : new Timestamp(System.currentTimeMillis()));
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi insertOptimization: " + e.getMessage());
@@ -240,7 +241,7 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return null;
         }
-        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [created_at] "
+        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at] "
                 + "FROM [dbo].[AI_OPTIMIZATIONS] WHERE [method_id] = ? ORDER BY [created_at] DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
@@ -263,7 +264,7 @@ public class AiOptimizationDAO extends DBContext {
         if (connection == null) {
             return list;
         }
-        String sql = "SELECT o.[optimization_id], o.[method_id], o.[original_code], o.[optimized_code], o.[explanation], o.[created_at] "
+        String sql = "SELECT o.[optimization_id], o.[method_id], o.[original_code], o.[optimized_code], o.[explanation], o.[new_complexity], o.[created_at] "
                 + "FROM [dbo].[AI_OPTIMIZATIONS] o "
                 + "INNER JOIN [dbo].[METHODS] m ON o.[method_id] = m.[method_id] "
                 + "INNER JOIN [dbo].[SOURCE_FILES] sf ON m.[file_id] = sf.[file_id] "
@@ -289,7 +290,7 @@ public class AiOptimizationDAO extends DBContext {
         if (code == null || code.trim().isEmpty() || connection == null) {
             return null;
         }
-        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [created_at] "
+        String sql = "SELECT TOP 1 [optimization_id], [method_id], [original_code], [optimized_code], [explanation], [new_complexity], [created_at] "
                 + "FROM [dbo].[AI_OPTIMIZATIONS] "
                 + "WHERE CAST([original_code] AS NVARCHAR(MAX)) = CAST(? AS NVARCHAR(MAX)) "
                 + "ORDER BY [created_at] DESC";
@@ -429,6 +430,9 @@ public class AiOptimizationDAO extends DBContext {
         o.setOriginalCode(rs.getString("original_code"));
         o.setOptimizedCode(rs.getString("optimized_code"));
         o.setExplanation(rs.getString("explanation"));
+        try {
+            o.setComplexityAfter(rs.getString("new_complexity"));
+        } catch (SQLException ignored) {}
         o.setCreatedAt(rs.getTimestamp("created_at"));
         return o;
     }
