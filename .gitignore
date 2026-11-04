@@ -9,3 +9,4 @@ nbproject/private/
 src/main/webapp/uploads/**
 !src/main/webapp/uploads/**/
 !src/main/webapp/uploads/**/.gitkeep
+.env

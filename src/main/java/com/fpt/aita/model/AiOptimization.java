@@ -1,11 +1,14 @@
 package com.fpt.aita.model;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
- * Model đại diện cho Đề xuất Tối ưu hóa Thuật toán từ AI (AI_OPTIMIZATIONS)
+ * Model ánh xạ thông tin tối ưu hóa AI và metadata của phương thức.
+ * Tương thích Java 1.8.
  */
-public class AiOptimization {
+public class AiOptimization implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int optimizationId;
     private int methodId;
@@ -15,12 +18,27 @@ public class AiOptimization {
     private String optimizedCode;
     private String explanation;
     private Timestamp createdAt;
-
-    // Thông tin bổ trợ bóc tách từ METHODS
     private String complexityBefore;
     private String complexityAfter;
 
     public AiOptimization() {
+    }
+
+    public AiOptimization(int methodId, String originalCode, String optimizedCode, String explanation) {
+        this.methodId = methodId;
+        this.originalCode = originalCode;
+        this.optimizedCode = optimizedCode;
+        this.explanation = explanation;
+    }
+
+    public AiOptimization(int optimizationId, int methodId, String originalCode, String optimizedCode,
+                          String explanation, Timestamp createdAt) {
+        this.optimizationId = optimizationId;
+        this.methodId = methodId;
+        this.originalCode = originalCode;
+        this.optimizedCode = optimizedCode;
+        this.explanation = explanation;
+        this.createdAt = createdAt;
     }
 
     public AiOptimization(int optimizationId, int methodId, String methodName, String fileName,
@@ -113,5 +131,14 @@ public class AiOptimization {
 
     public void setComplexityAfter(String complexityAfter) {
         this.complexityAfter = complexityAfter;
+    }
+
+    @Override
+    public String toString() {
+        return "AiOptimization{" +
+                "optimizationId=" + optimizationId +
+                ", methodId=" + methodId +
+                ", createdAt=" + createdAt +
+                '}';
     }
 }
