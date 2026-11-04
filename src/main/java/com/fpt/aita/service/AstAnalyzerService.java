@@ -161,9 +161,6 @@ public class AstAnalyzerService {
                                 "Vòng lặp lồng nhau có chi phí tính toán cao. Hãy cân nhắc dùng cấu trúc dữ liệu băm (HashMap/HashSet) để giảm độ phức tạp về O(N).");
                         totalIssuesCount++;
                         warningCount++;
-
-                        // Tự động chèn gợi ý tối ưu AI mẫu cho phương thức bị O(N^2)
-                        generateSampleOptimization(methodId, md.toString());
                     }
 
                     // Rule PERF02: Ghép chuỗi trong vòng lặp

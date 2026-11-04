@@ -166,6 +166,7 @@ public class AiAnalysisService {
                     result.getOptimizedCode() != null ? result.getOptimizedCode() : "",
                     result.getExplanation()
             );
+            opt.setComplexityAfter(result.getNewComplexity());
             opt.setCreatedAt(new Timestamp(System.currentTimeMillis()));
             boolean saved = dao.insertOptimization(opt);
             if (!saved) {
