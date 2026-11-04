@@ -32,6 +32,12 @@ public class AuthFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
 
+        // Thiết lập mã hóa UTF-8 trước khi đọc bất kỳ request parameter nào (ngăn ngừa lỗi vỡ font tiếng Việt)
+        if (request.getCharacterEncoding() == null) {
+            request.setCharacterEncoding("UTF-8");
+        }
+        response.setCharacterEncoding("UTF-8");
+
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String path = uri.substring(contextPath.length());

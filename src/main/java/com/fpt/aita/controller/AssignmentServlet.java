@@ -41,6 +41,17 @@ public class AssignmentServlet extends HttpServlet {
             return;
         }
 
+        if ("clone".equalsIgnoreCase(action)) {
+            try {
+                int id = Integer.parseInt(request.getParameter("id"));
+                Assignment a = assignmentDAO.getAssignmentById(id);
+                if (a != null) {
+                    request.setAttribute("draftTitle", "[Bản sao] " + a.getTitle());
+                    request.setAttribute("draftDescription", a.getDescription());
+                }
+            } catch (Exception ignored) {}
+        }
+
         if ("edit".equalsIgnoreCase(action)) {
             try {
                 int id = Integer.parseInt(request.getParameter("id"));

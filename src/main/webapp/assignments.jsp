@@ -134,8 +134,8 @@
 
             <!-- FORM THÊM MỚI HOẶC CHỈNH SỬA -->
             <div class="card">
-                <h3>${not empty editAssignment ? "✏️ Chỉnh Sửa Bài Tập" : "➕ Thêm Đề Bài Mới"}</h3>
-                <form action="assignments" method="POST">
+                <h3>${not empty editAssignment ? "✏️ Chỉnh Sửa Bài Tập" : (not empty draftTitle ? "📋 Tạo Bài Tập Mới (Từ Bản Sao)" : "➕ Thêm Đề Bài Mới")}</h3>
+                <form action="assignments" method="POST" accept-charset="UTF-8">
                     <input type="hidden" name="action" value="${not empty editAssignment ? 'update' : 'create'}" />
                     <c:if test="${not empty editAssignment}">
                         <input type="hidden" name="id" value="${editAssignment.assignmentId}" />
@@ -147,8 +147,8 @@
                     <label>Mô tả chi tiết:</label>
                     <textarea name="description" rows="3" placeholder="Nhập yêu cầu đề bài...">${not empty editAssignment ? editAssignment.description : draftDescription}</textarea>
 
-                    <button type="submit">${not empty editAssignment ? "Cập Nhật" : "Lưu Bài Tập"}</button>
-                    <c:if test="${not empty editAssignment}">
+                    <button type="submit">${not empty editAssignment ? "Cập Nhật" : (not empty draftTitle ? "Lưu Bản Sao Bài Tập" : "Lưu Bài Tập")}</button>
+                    <c:if test="${not empty editAssignment or not empty draftTitle}">
                         <a href="assignments" class="btn-cancel">Hủy</a>
                     </c:if>
                 </form>
@@ -179,6 +179,7 @@
                                         <a href="course?id=${item.courseId != null ? item.courseId : 1}" class="btn-edit" style="background:#0284c7; color:#fff;" title="Xem các bài nộp và báo cáo phân tích">
                                             📊 Xem Báo Cáo
                                         </a>
+                                        <a href="assignments?action=clone&id=${item.assignmentId}" class="btn-edit" style="background:#0f766e; color:#fff;" title="Tạo bài tập mới từ bài tập này">📋 Nhân bản</a>
                                         <a href="assignments?action=edit&id=${item.assignmentId}" class="btn-edit">Sửa</a>
                                         <a href="assignments?action=delete&id=${item.assignmentId}" class="btn-delete" 
                                            onclick="return confirm('Bạn có chắc muốn xóa bài tập #${item.assignmentId}?')">Xóa</a>
