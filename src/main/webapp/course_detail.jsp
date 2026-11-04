@@ -508,6 +508,16 @@
             <c:remove var="flashError" scope="session" />
         </c:if>
 
+        <c:if test="${not empty sessionScope.sandboxSubmissionResult}">
+            <div class="flash-success" role="status">
+                <strong>Docker Sandbox: <c:out value="${sessionScope.sandboxSubmissionResult.status}" /></strong>
+                (<c:out value="${sessionScope.sandboxSubmissionResult.executionTimeMs}" /> ms)
+                <p>SUCCESS chỉ xác nhận biên dịch và chạy thành công, chưa chấm đúng/sai đáp án.</p>
+                <pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;"><c:out value="${sessionScope.sandboxSubmissionResult.output}" /></pre>
+            </div>
+            <c:remove var="sandboxSubmissionResult" scope="session" />
+        </c:if>
+
         <!-- COURSE INFO HEADER -->
         <div class="course-header">
             <div class="course-badge">${course.code}</div>
@@ -709,6 +719,7 @@
                     <div class="drop-title">Kéo & thả file bài làm vào đây</div>
                     <div class="drop-sub">hoặc <span class="drop-browse" onclick="triggerFileInput(event)">chọn tệp từ máy tính</span></div>
                     <div class="drop-types">Hỗ trợ: .zip, .rar, .tar.gz, .java, .pdf, .docx, .sql (Tối đa 50MB)</div>
+                    <div class="drop-types">Sandbox Java: nộp ZIP có Main.java (main class mặc định: Main); giới hạn biên dịch + chạy 5 giây.</div>
                 </div>
 
                 <!-- KHUNG XEM TRƯỚC FILE ĐÃ CHỌN -->
