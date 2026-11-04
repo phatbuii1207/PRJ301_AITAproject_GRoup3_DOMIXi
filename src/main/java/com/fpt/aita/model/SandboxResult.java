@@ -10,16 +10,23 @@ public final class SandboxResult {
 
     private final Status status;
     private final String output;
+    private final String diagnostics;
     private final long executionTimeMs;
 
     public SandboxResult(Status status, String output, long executionTimeMs) {
+        this(status, output, "", executionTimeMs);
+    }
+
+    public SandboxResult(Status status, String output, String diagnostics, long executionTimeMs) {
         this.status = status;
         this.output = output == null ? "" : output;
+        this.diagnostics = diagnostics == null ? "" : diagnostics;
         this.executionTimeMs = executionTimeMs;
     }
 
     public boolean isSuccess() { return status == Status.SUCCESS; }
     public Status getStatus() { return status; }
     public String getOutput() { return output; }
+    public String getDiagnostics() { return diagnostics; }
     public long getExecutionTimeMs() { return executionTimeMs; }
 }

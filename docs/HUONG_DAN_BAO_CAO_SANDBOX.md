@@ -1,5 +1,10 @@
 # Hướng dẫn báo cáo, giải thích code và demo Docker Sandbox
 
+Cập nhật 2026-11-04: hệ thống đã có GradingService chấm điểm theo test case bên trên
+sandbox; xem [hướng dẫn chấm điểm](TEST_CASE_GRADING.md). Những demo SUCCESS trong
+tài liệu này là trạng thái thực thi của SandboxResult, tách khỏi ACCEPTED/WRONG_ANSWER
+và điểm số của bộ chấm.
+
 Tài liệu dành cho phần trình bày cá nhân khoảng 8–10 phút. Nếu chỉ có 5 phút,
 nói phần mở đầu, luồng xử lý, ba demo bắt buộc và giới hạn hiện tại.
 Các phần walkthrough/FAQ dùng để học trước hoặc trả lời vấn đáp.
@@ -16,7 +21,8 @@ Trong AITA hiện tại:
 - Webapp nhận ZIP, kiểm tra/giải nén có giới hạn rồi đưa Java source vào container.
 - Container dùng JDK 8 để biên dịch và chạy `Main`.
 - Webapp nhận status, output, thời gian; không chạy Main trong JVM Tomcat.
-- `SUCCESS` chưa có nghĩa là đúng bài. Chưa có bộ test expected output/tính điểm.
+- `SandboxResult.SUCCESS` chưa có nghĩa là đúng bài. GradingService so stdout với
+  expected output và tính điểm riêng; kết quả đúng của grader là ACCEPTED.
 
 Một ví dụ dễ nói: “Chương trình sinh viên là người được vào phòng thực hành.
 Phòng này không có đường mạng ra ngoài, nguồn vào chỉ được đọc, tài nguyên có hạn,
@@ -304,24 +310,23 @@ docker ps -a --filter label=aita.sandbox=true --format '{{.Names}} {{.Status}}'
 Khi không có người khác chạy sandbox cùng lúc, cần không có dòng container nào.
 Không dùng lệnh xóa hàng loạt container vì máy còn database/các project khác.
 
-## 4. Demo trên giao diện web nếu giảng viên yêu cầu
+## 4. Demo trên giao diện web
 
-1. Build image trước, build/deploy WAR mới trên Tomcat 9/NetBeans theo cấu hình nhóm.
-2. Bật SQL Server đang dùng; mở ứng dụng qua URL NetBeans cung cấp.
-3. Giảng viên tạo bài “Sandbox demo” với deadline **trong tương lai**. Các bài seed
-   cũ có thể đã hết hạn; bị chặn deadline là đúng, không phải sandbox lỗi.
-4. Đăng nhập sinh viên có quyền vào môn học, chọn bài và nộp lần lượt
-   `target/sandbox-demo/hello.zip`, `tle.zip`, `files.zip`, `network.zip`.
-5. Đọc khung Docker Sandbox ngay sau mỗi lần nộp. Khung kết quả là flash session,
-   refresh thêm lần nữa có thể làm mất nó. Chụp trước khi chuyển bước.
-6. Vẫn dùng Terminal B inspect container để chứng minh cấu hình thực tế.
+Luồng web hiện đã tích hợp bộ chấm. Build image, chạy migration, deploy WAR mới,
+bật SQL Server và dùng bài demo riêng có deadline tương lai.
 
-Kết quả thô được map sang DB: SUCCESS → `Completed`, lỗi code/timeout → `Failed`,
-lỗi hạ tầng/bận → `Pending`. Verdict chi tiết/output chưa được lưu lâu dài vào DB.
-Tệp không phải ZIP vẫn theo luồng upload cũ và không được sandbox tự chạy.
+1. Chạy `python3 scripts/prepare-grading-demo.py` để tạo các ZIP cộng hai số.
+2. Giảng viên mở link Test case và thêm input/expected/weight theo
+   [hướng dẫn chấm điểm](TEST_CASE_GRADING.md).
+3. Sinh viên nộp `correct-sum.zip` để thấy 10.00, `hardcoded-five.zip` để thấy 2.00
+   và `compile-error.zip` để thấy 0.00.
+4. Kết quả lưu DB và mở lại được; test ẩn không đưa vào HTML cho sinh viên.
+5. Giảng viên sửa barem và dùng Chấm lại để áp dụng cấu hình mới.
 
-Demo terminal chạy không ghi database. Demo web là bài nộp thật: dùng bài demo riêng,
-và giữ/xóa dữ liệu theo cách nhóm quản lý; không sửa deadline bài thật chỉ để demo.
+Dùng demo terminal ở mục 3 để trình bày riêng cơ chế TLE/file/network của sandbox;
+những chương trình probe này không phải lời giải bài cộng hai số. Vẫn có thể quan sát
+container trên Terminal B khi chạy grader. Demo web tạo bài nộp thật, nên dùng bài
+riêng để không thay dữ liệu/deadline của bài học đang sử dụng.
 
 ## 5. Giải thích code chi tiết theo từng file
 
@@ -414,7 +419,8 @@ File: `src/main/java/com/fpt/aita/service/DockerSandboxService.java`.
 **execute(Path)**
 
 Đọc main class server cấu hình, mặc định `Main`, rồi gọi overload với stdin rỗng.
-Luồng upload hiện tại chưa truyền test input riêng cho từng assignment.
+Luồng upload hiện lấy main class và test input từ cấu hình assignment qua GradingService;
+execute(Path) chỉ là API mặc định cho demo sandbox độc lập.
 
 **execute(Path, String, byte[])**
 
@@ -444,16 +450,18 @@ image bất ngờ. Không có `--privileged`, không host networking và không 
 **run**
 
 ```java
-new ProcessBuilder(command).redirectErrorStream(true).start();
+new ProcessBuilder(command).start();
 ```
 
 `ProcessBuilder` chạy Docker CLI, không thực thi trực tiếp `Main.java` trên host.
 Danh sách đối số tránh phải ghép thành `sh -c` với tên file/lệnh sinh viên.
-`redirectErrorStream(true)` gộp stderr vào stdout để thu cả compiler/runtime error.
+Stdout và stderr được thu riêng: khi grader so đáp án chỉ dùng stdout, còn lỗi compiler/runtime
+được giữ ở diagnostics. Tổng dung lượng hai stream vẫn có giới hạn chung.
 
-Có hai thread I/O:
+Có ba thread I/O:
 
-- Reader: `process.getInputStream()` để **đọc stdout/stderr của process**.
+- Reader: `process.getInputStream()` để **đọc stdout của process**.
+- Error reader: `process.getErrorStream()` để đọc stderr riêng.
 - Writer: `process.getOutputStream()` để **ghi stdin cho process**, xong thì đóng
   stream để chương trình biết EOF, không chờ nhập từ bàn phím vô hạn.
 
@@ -496,19 +504,13 @@ Thiếu Docker/image là lỗi hạ tầng, không phải chương trình sinh v
 
 ### 5.6 Servlet/JSP — nối module với web
 
-Trong `CourseDetailServlet`, tìm `sandboxService.execute(destFile.toPath())`.
+CourseDetailServlet lưu file/hash và enqueue ID bài ZIP. Worker của GradingQueueManager
+lấy barem, kiểm tra file/hash, gọi GradingService rồi lưu điểm và từng kết quả.
+GradingService gọi DockerSandboxService cho mỗi test với stdin riêng; đáp án nằm ở backend.
 
-- Chỉ gọi cho filename `.zip` (không phân biệt hoa/thường).
-- Gọi sau khi lưu file và tính hash; servlet không chứa lệnh compiler.
-- Map verdict sang trạng thái coarse `Completed`/`Failed`/`Pending` của SUBMISSIONS.
-- Lưu SandboxResult vào flash session để JSP hiển thị sau redirect.
-
-Trong `course_detail.jsp`, tìm `sandboxSubmissionResult`.
-
-- In status và executionTimeMs.
-- In output trong `<pre>` bằng `<c:out>`, nên source in `<script>` được hiện thành
-  văn bản thay vì được nhúng thành script của trang.
-- Xóa flash sau khi hiển thị. Đây chưa phải lịch sử kết quả lưu lâu dài.
+GradingServlet cung cấp trang quản lý test case cho chủ bài và trang kết quả có phân quyền.
+JSP mới trong WEB-INF/views dùng c:out khi render dữ liệu; test ẩn được redacted ở backend.
+Xem [TEST_CASE_GRADING.md](TEST_CASE_GRADING.md) khi trình bày logic chấm thường.
 
 ## 6. Các câu hỏi vấn đáp nên tập trả lời
 
@@ -563,13 +565,13 @@ marker, xem source probe và inspect Docker để xác nhận lớp bảo vệ.�
 
 **11. Bài cho kết quả sai toán học nhưng exit 0 thì sao?**
 
-“Hiện vẫn SUCCESS về thực thi. Chưa có expected output/tính điểm. Khi bổ sung
-grader, nó sẽ dùng kết quả thực thi để kết luận đúng/sai riêng.”
+“Sandbox vẫn trả SUCCESS về thực thi. GradingService sẽ so output với đáp án,
+trả WRONG_ANSWER cho test sai và không cộng trọng số test đó.”
 
 **12. Nhiều sinh viên nộp cùng lúc thì sao?**
 
-“Hai slot dùng chung hạn chế job đang hoạt động. Lượt tiếp theo nhận SANDBOX_BUSY.
-Chưa có hàng đợi bền vững; đó là hướng mở rộng.”
+“Worker dùng queue FIFO ở RAM, tối đa 100 job chờ. Sandbox còn có hai slot
+để giới hạn số lần chạy. Chưa có hàng đợi bền vững qua restart.”
 
 **13. 5 giây là thời gian chạy Main hay thời gian HTTP?**
 
@@ -609,7 +611,8 @@ Chạy full suite trước buổi báo cáo:
 
 Hai report: `target/surefire-reports/com.fpt.aita.service.SandboxWorkspaceTest.txt`
 và `target/failsafe-reports/com.fpt.aita.service.DockerSandboxIT.txt`.
-Theo code hiện tại có 6 unit test + 11 Docker integration test. Script demo 7 ca
+Riêng sandbox có 6 unit test + 11 Docker integration test. Bộ chấm bổ sung
+15 unit + 4 Docker integration, tổng 36 test trong full suite. Script demo 7 ca
 là bằng chứng trình bày riêng, không cộng chúng thành số JUnit test mới.
 
 ## 8. Checklist cuối trước khi đứng báo cáo

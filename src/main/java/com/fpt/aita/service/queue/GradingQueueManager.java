@@ -1,146 +1,142 @@
 package com.fpt.aita.service.queue;
 
-import com.fpt.aita.dal.SubmissionDAO;
+import com.fpt.aita.dal.GradingDAO;
+import com.fpt.aita.model.GradingConfig;
+import com.fpt.aita.model.GradingReport;
+import com.fpt.aita.model.Submission;
+import com.fpt.aita.service.GradingService;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Logger;
 
-/**
- * THÀNH VIÊN 3: Quản lý Hàng Đợi Chấm Bài Bất Đồng Bộ (Grading Queue Manager)
- * - Sử dụng Singleton Pattern & In-Memory BlockingQueue chuẩn Thread-safe.
- * - Tránh nghẽn server Tomcat khi nhiều sinh viên nộp bài cùng lúc.
- * - Cung cấp cơ chế cắm các engine phân tích mã nguồn AST / AI vào phía sau.
- */
-public class GradingQueueManager {
-
+/** Bounded FIFO worker. Grading is real; AI/AST reporting remains a separate pipeline. */
+public final class GradingQueueManager {
     private static volatile GradingQueueManager instance;
+    private static final Logger LOG = Logger.getLogger(GradingQueueManager.class.getName());
+    private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>(100);
+    private final ConcurrentHashMap<Integer, String> details = new ConcurrentHashMap<>();
+    private final Set<Integer> active = ConcurrentHashMap.newKeySet();
+    private final Path uploadRoot;
+    private final Thread worker;
+    private volatile boolean running = true;
 
-    // Hàng đợi lưu trữ các submission_id chờ chấm theo nguyên tắc FIFO
-    private final BlockingQueue<Integer> queue;
-
-    // Bảng theo dõi tiến độ / vị trí của submission trong hàng đợi
-    // Key: submissionId, Value: Mô tả tiến độ (vd: "Đang chờ ở hàng đợi", "Đang phân tích AST...")
-    private final ConcurrentHashMap<Integer, String> taskStatusMap;
-
-    private final SubmissionDAO submissionDAO;
-    private Thread workerThread;
-    private volatile boolean isRunning = false;
-
-    private GradingQueueManager() {
-        this.queue = new LinkedBlockingQueue<>();
-        this.taskStatusMap = new ConcurrentHashMap<>();
-        this.submissionDAO = new SubmissionDAO();
-        startWorker();
-    }
-
-    public static GradingQueueManager getInstance() {
-        if (instance == null) {
-            synchronized (GradingQueueManager.class) {
-                if (instance == null) {
-                    instance = new GradingQueueManager();
-                }
-            }
-        }
-        return instance;
-    }
-
-    /**
-     * Đẩy một bài nộp vào hàng đợi chấm bài
-     */
-    public synchronized boolean enqueue(int submissionId) {
-        if (submissionId <= 0) return false;
-        
-        // Đặt trạng thái ban đầu trong DB là Pending
-        submissionDAO.updateSubmissionStatus(submissionId, "Pending");
-        taskStatusMap.put(submissionId, "Đang chờ chấm (Vị trí trong hàng đợi: #" + (queue.size() + 1) + ")");
-        
-        return queue.offer(submissionId);
-    }
-
-    /**
-     * Khởi động luồng Worker xử lý ngầm (Background Worker)
-     */
-    private void startWorker() {
-        if (isRunning) return;
-        isRunning = true;
-
-        workerThread = new Thread(() -> {
-            System.out.println(">>> [GradingQueue] Worker đã khởi động thành công, sẵn sàng nhận bài!");
-            while (isRunning) {
+    private GradingQueueManager(Path uploadRoot) {
+        this.uploadRoot = uploadRoot.toAbsolutePath().normalize();
+        worker = new Thread(() -> {
+            while (running) {
                 try {
-                    // Chờ và lấy bài nộp tiếp theo trong hàng đợi (Block nếu hàng đợi rỗng)
-                    Integer submissionId = queue.take();
-                    processSubmission(submissionId);
-                } catch (InterruptedException e) {
-                    System.out.println(">>> [GradingQueue] Worker nhận tín hiệu dừng.");
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
+                    int id = queue.take();
+                    try { process(id); } finally {
+                        active.remove(id);
+                        if (details.size() > 1000) {
+                            for (Integer old : details.keySet()) {
+                                if (!active.contains(old)) details.remove(old);
+                                if (details.size() <= 1000) break;
+                            }
+                        }
+                    }
+                } catch (InterruptedException ex) { Thread.currentThread().interrupt(); break; }
             }
         }, "AITA-Grading-Worker-Thread");
-
-        workerThread.setDaemon(true); // Tự giải phóng khi Tomcat dừng
-        workerThread.start();
+        worker.setDaemon(true); worker.start();
     }
 
-    /**
-     * Luồng chấm bài (gọi Static Code Analysis AST & AI)
-     */
-    private void processSubmission(int submissionId) {
+    public static synchronized void initialize(Path uploadRoot) {
+        if (instance == null) instance = new GradingQueueManager(uploadRoot);
+    }
+    public static GradingQueueManager getInstance() {
+        GradingQueueManager manager = instance;
+        if (manager == null) throw new IllegalStateException("Grading lifecycle chưa khởi tạo.");
+        return manager;
+    }
+
+    public synchronized boolean enqueue(int submissionId) {
+        if (!running || submissionId <= 0 || queue.remainingCapacity() == 0 || !active.add(submissionId)) return false;
+        try (GradingDAO dao = new GradingDAO()) {
+            dao.updateStatus(submissionId, "Pending");
+            details.put(submissionId, "Đang chờ chấm test case.");
+            queue.add(submissionId);
+            return true;
+        } catch (Exception ex) {
+            active.remove(submissionId);
+            LOG.warning("Cannot enqueue submission " + submissionId + " (" + ex.getClass().getSimpleName() + ")");
+            return false;
+        }
+    }
+
+    private void process(int id) {
         try {
-            System.out.println(">>> [GradingQueue] Bắt đầu chấm bài ID: " + submissionId);
-            
-            // 1. Chuyển trạng thái sang Processing
-            submissionDAO.updateSubmissionStatus(submissionId, "Processing");
-            taskStatusMap.put(submissionId, "Đang phân tích mã nguồn tĩnh (AST)...");
-
-            // Giả lập thời gian xử lý AST + AI (từ 2 - 3 giây)
-            // Khi thành viên làm AST/AI hoàn thành, chỉ cần gọi hàm engine ở đây!
-            Thread.sleep(2500);
-
-            // 2. Cập nhật tiến độ tiếp theo
-            taskStatusMap.put(submissionId, "Đang quét lỗi bảo mật & đối chiếu bộ luật RULES...");
-            Thread.sleep(1500);
-
-            // 3. Hoàn tất quá trình chấm bài
-            submissionDAO.updateSubmissionStatus(submissionId, "Completed");
-            taskStatusMap.put(submissionId, "Đã chấm hoàn tất (Completed)");
-            System.out.println(">>> [GradingQueue] Chấm bài ID: " + submissionId + " THÀNH CÔNG!");
-
-        } catch (InterruptedException ie) {
+            Submission submission; GradingConfig config;
+            try (GradingDAO dao = new GradingDAO()) {
+                submission = dao.findSubmission(id);
+                if (submission == null) return;
+                dao.updateStatus(id, "Processing");
+                config = dao.loadConfig(submission.getAssignmentId());
+            }
+            details.put(id, "Đang chạy test case trong Docker Sandbox...");
+            GradingReport report;
+            if (config == null) report = GradingReport.unavailable("NOT_CONFIGURED", "Giảng viên chưa cấu hình test case; chưa tính điểm.");
+            else {
+                Path archive = resolveArchive(submission.getFilePath());
+                if (!hash(archive).equalsIgnoreCase(submission.getSha256Hash())) {
+                    throw new IllegalArgumentException("Submission hash mismatch");
+                }
+                report = new GradingService().grade(archive, config);
+            }
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+            try (GradingDAO dao = new GradingDAO()) { dao.saveReport(id, report); }
+            details.put(id, report.isComplete() ? "Đã chấm " + report.getPassed() + "/" + report.getTotal()
+                    + " test; điểm " + report.getScore() + "/10." : report.getMessage());
+        } catch (InterruptedException ex) {
+            details.put(id, "Tác vụ bị gián đoạn; cần chấm lại.");
+            saveFailure(id);
             Thread.currentThread().interrupt();
-            submissionDAO.updateSubmissionStatus(submissionId, "Failed");
-            taskStatusMap.put(submissionId, "Bị gián đoạn");
-        } catch (Exception e) {
-            System.err.println(">>> [GradingQueue] Lỗi khi chấm bài ID " + submissionId + ": " + e.getMessage());
-            submissionDAO.updateSubmissionStatus(submissionId, "Failed");
-            taskStatusMap.put(submissionId, "Lỗi phân tích: " + e.getMessage());
+        } catch (Exception ex) {
+            details.put(id, "Không hoàn tất chấm bài. Kiểm tra cấu hình, file và hạ tầng rồi chấm lại.");
+            LOG.warning("Cannot grade submission " + id + " (" + ex.getClass().getSimpleName() + ")");
+            saveFailure(id);
         }
     }
 
-    /**
-     * Lấy mô tả trạng thái hiện tại của bài nộp
-     */
-    public String getStatusDetail(int submissionId) {
-        return taskStatusMap.getOrDefault(submissionId, "Không có trong hàng đợi");
+    private void saveFailure(int id) {
+        try (GradingDAO dao = new GradingDAO()) {
+            dao.saveReport(id, GradingReport.unavailable("GRADING_ERROR", "Chưa có điểm hợp lệ; kiểm tra hạ tầng/file rồi chấm lại."));
+        } catch (Exception ex) { LOG.warning("Cannot persist grading failure for submission " + id); }
     }
 
-    /**
-     * Số lượng bài nộp còn đang chờ trong hàng đợi
-     */
-    public int getQueueSize() {
-        return queue.size();
-    }
-
-    /**
-     * Dừng worker khi tắt ứng dụng
-     */
-    public synchronized void shutdown() {
-        isRunning = false;
-        if (workerThread != null) {
-            workerThread.interrupt();
+    private Path resolveArchive(String stored) throws Exception {
+        String prefix = "/uploads/submissions/";
+        if (stored == null || !stored.startsWith(prefix)) throw new IllegalArgumentException("Invalid upload path");
+        String name = stored.substring(prefix.length());
+        if (name.isEmpty() || name.contains("/") || name.contains("\\") || !name.toLowerCase(java.util.Locale.ROOT).endsWith(".zip")) {
+            throw new IllegalArgumentException("Invalid archive name");
         }
+        Path archive = uploadRoot.resolve(name).normalize();
+        if (!archive.getParent().equals(uploadRoot) || !Files.isRegularFile(archive, LinkOption.NOFOLLOW_LINKS)
+                || !archive.toRealPath().getParent().equals(uploadRoot.toRealPath()) || Files.size(archive) > 50L * 1024 * 1024) {
+            throw new IllegalArgumentException("Archive unavailable");
+        }
+        return archive;
     }
+    private String hash(Path archive) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream in = Files.newInputStream(archive)) {
+            byte[] buffer = new byte[8192]; int n;
+            while ((n = in.read(buffer)) != -1) digest.update(buffer, 0, n);
+        }
+        StringBuilder hex = new StringBuilder();
+        for (byte b : digest.digest()) hex.append(String.format("%02x", b));
+        return hex.toString();
+    }
+    public String getStatusDetail(int id) { return details.getOrDefault(id, "Xem kết quả đã lưu tại trang chấm test case."); }
+    public int getQueueSize() { return queue.size(); }
+    public boolean isActive(int id) { return active.contains(id); }
+    public synchronized void shutdown() { running = false; worker.interrupt(); }
 }

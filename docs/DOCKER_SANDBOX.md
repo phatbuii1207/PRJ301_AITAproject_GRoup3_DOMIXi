@@ -32,7 +32,8 @@ Tomcat/NetBeans của nhóm; thay đổi source không tự cập nhật ứng d
 ## Luồng thực thi
 
 1. `CourseDetailServlet` lưu bài nộp, tính SHA-256 theo luồng sẵn có.
-2. Bài `.zip` được đưa vào `DockerSandboxService.execute(Path)`.
+2. Bài `.zip` được enqueue; worker lấy barem của assignment và gọi GradingService.
+   GradingService gọi sandbox với stdin của từng test, so stdout rồi tính điểm; xem [bộ chấm](TEST_CASE_GRADING.md).
 3. Service dành một trong hai slot dùng chung trong webapp, giải nén vào staging riêng.
 4. Chỉ file `.java` được chép vào staging; service tạo manifest javac của riêng mình.
    Không chạy script, Maven, Gradle, JAR hoặc annotation processor do sinh viên cung cấp.
@@ -94,10 +95,12 @@ ZIP có thể chứa thư mục bọc bên ngoài và nhiều file Java.
 - `AITA_SANDBOX_IMAGE=aita-sandbox:java8`: đổi tên image đã build nếu cần.
 - API `execute(Path, String, byte[])`: hỗ trợ main class và stdin (tối đa 64 KiB)
   từ cấu hình bài tập tin cậy. Form sinh viên không được nhập Docker flags hoặc lệnh.
-- Luồng upload hiện tại dùng main class chung và stdin rỗng; chưa có cấu hình main/stdin
-  riêng cho từng assignment hoặc bộ so sánh expected output.
+- Luồng upload hiện lấy main class và test input riêng của assignment từ database qua GradingService.
+  API sandbox độc lập vẫn mặc định Main/stdin rỗng nếu được gọi trực tiếp.
 
-`SandboxResult`: `isSuccess()`, `status`, `output`, `executionTimeMs`.
+`SandboxResult`: `isSuccess()`, `status`, `output`, `diagnostics`, `executionTimeMs`.
+Khi SUCCESS, output là stdout để so đáp án; stderr nằm riêng ở diagnostics.
+Khi có lỗi thực thi, output giữ cả thông báo lỗi để tương thích demo cũ. Tổng hai stream bị giới hạn 64 KiB.
 
 | Status | Ý nghĩa |
 | --- | --- |
@@ -107,7 +110,7 @@ ZIP có thể chứa thư mục bọc bên ngoài và nhiều file Java.
 | `TIME_LIMIT_EXCEEDED` | Service hết deadline 5 giây |
 | `OUTPUT_LIMIT_EXCEEDED` | Output vượt 64 KiB |
 | `INVALID_SUBMISSION` | ZIP, main class hoặc stdin không hợp lệ |
-| `SANDBOX_BUSY` | Hai slot đang bận; người dùng cần thử nộp lại, hiện chưa có queue |
+| `SANDBOX_BUSY` | Hai slot sandbox đang bận; grader không công bố điểm và cho phép giảng viên chấm lại |
 | `SANDBOX_UNAVAILABLE` | Thiếu image/Docker, lỗi hạ tầng, hoặc sandbox đang khóa do cleanup lỗi |
 | `INTERNAL_ERROR` | Tác vụ bị hủy hoặc không xác nhận được cleanup |
 
@@ -116,11 +119,12 @@ khi dừng có thể không còn, và exit code không chứng minh nguyên nhâ
 Mã thoát của chương trình Java được wrapper quy về runtime error, tránh nhầm
 `System.exit(65)` thành lỗi compiler.
 
-Trang nộp bài hiển thị status/thời gian/output; output được escape bằng `c:out`.
-DB giữ trạng thái coarse có sẵn (`Completed`/`Failed`), thêm giá trị `Pending` cho lỗi
-hạ tầng hoặc sandbox bận, tất cả vừa cột varchar(20). Không đổi schema SQL Server.
-Chi tiết sandbox chỉ hiển thị ở flash sau POST, chưa lưu vĩnh viễn vào database.
-Các loại tệp khác vẫn được lưu theo luồng cũ và được thông báo chưa chạy sandbox.
+Luồng web hiện chuyển sang trang kết quả chấm test case, lưu điểm và snapshot từng
+verdict trong các bảng GRADING_*. SUBMISSIONS.status là trạng thái công việc
+Completed/Failed/Pending, tách khỏi verdict đúng/sai. Thêm schema bằng migration
+`database/migrations/001_test_case_grading.sql`. Output trên trang kết quả được escape
+bằng c:out; nội dung test ẩn được backend redacted trước khi render cho sinh viên.
+Các tệp không phải ZIP vẫn được lưu và không chấm tự động.
 
 ## Demo bảo vệ và bằng chứng
 

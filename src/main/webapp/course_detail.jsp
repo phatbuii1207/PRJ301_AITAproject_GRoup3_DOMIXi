@@ -607,6 +607,7 @@
                                    
                                     <td>
                                         <b>${a.title}</b><br/>
+                                        <a href="grading-tests?assignmentId=${a.assignmentId}" style="font-size:13px;">Test case</a><br/>
                                         <span style="font-size:13px; color:var(--text-muted);">${a.description}</span>
                                     </td>
                                     <td>${a.lecturerName}</td>
@@ -655,6 +656,7 @@
                                                         SHA: <code>${sub.sha256Hash.substring(0, 14)}...</code>
                                                     </div>
                                                     <div style="margin-top: 6px;">
+                                                        <a href="grading-result?submissionId=${sub.submissionId}">Điểm test case</a>
                                                         <c:choose>
                                                             <c:when test="${reportMap[sub.submissionId]}">
                                                                 <a href="report?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:#0284c7; color:#fff; border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Xem báo cáo chất lượng mã nguồn">
@@ -662,8 +664,8 @@
                                                                 </a>
                                                             </c:when>
                                                             <c:otherwise>
-                                                                <a href="report?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Bài nộp đang trong hàng đợi chấm">
-                                                                    ⏳ Đang chấm
+                                                                <a href="grading-result?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Bài nộp đang trong hàng đợi chấm">
+                                                                    🧪 Kết quả test
                                                                 </a>
                                                             </c:otherwise>
                                                         </c:choose>
@@ -733,8 +735,8 @@
                                                             </a>
                                                         </c:when>
                                                         <c:otherwise>
-                                                            <a href="report?submissionId=${sub.submissionId}" class="btn btn-secondary" style="border:1px solid #f59e0b; color:#fbbf24; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Hệ thống đang chấm bài">
-                                                                ⏳ Đang chấm
+                                                            <a href="grading-result?submissionId=${sub.submissionId}" class="btn btn-secondary" style="border:1px solid #f59e0b; color:#fbbf24; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Hệ thống đang chấm bài">
+                                                                🧪 Kết quả test
                                                             </a>
                                                         </c:otherwise>
                                                     </c:choose>
@@ -794,7 +796,7 @@
                     <div class="drop-title">Kéo & thả file bài làm vào đây</div>
                     <div class="drop-sub">hoặc <span class="drop-browse" onclick="triggerFileInput(event)">chọn tệp từ máy tính</span></div>
                     <div class="drop-types">Hỗ trợ: .zip, .rar, .tar.gz, .java, .pdf, .docx, .sql (Tối đa 50MB)</div>
-                    <div class="drop-types">Sandbox Java: nộp ZIP có Main.java (main class mặc định: Main); giới hạn biên dịch + chạy 5 giây.</div>
+                    <div class="drop-types">Chấm tự động ZIP Java theo bộ test giảng viên cấu hình; giới hạn biên dịch + chạy 5 giây mỗi test.</div>
                 </div>
 
                 <!-- KHUNG XEM TRƯỚC FILE ĐÃ CHỌN -->
@@ -1211,6 +1213,7 @@
                                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                                     Tải về
                                                 </a>
+                                                <a href="grading-result?submissionId=${sub.submissionId}" class="btn-download">Điểm test case</a>
                                                 <c:choose>
                                                     <c:when test="${reportMap[sub.submissionId]}">
                                                         <a href="report?submissionId=${sub.submissionId}" class="btn-download" style="background:#0284c7; color:#fff; border-color:#0284c7; margin-left:5px;" title="Xem báo cáo chất lượng mã nguồn">
@@ -1218,8 +1221,8 @@
                                                         </a>
                                                     </c:when>
                                                     <c:otherwise>
-                                                        <a href="report?submissionId=${sub.submissionId}" class="btn-download" style="background:rgba(245,158,11,0.15); color:#fbbf24; border-color:rgba(245,158,11,0.4); margin-left:5px;" title="Bài nộp đang trong hàng đợi chấm">
-                                                            ⏳ Đang chấm
+                                                        <a href="grading-result?submissionId=${sub.submissionId}" class="btn-download" style="background:rgba(245,158,11,0.15); color:#fbbf24; border-color:rgba(245,158,11,0.4); margin-left:5px;" title="Bài nộp đang trong hàng đợi chấm">
+                                                            🧪 Kết quả test
                                                         </a>
                                                     </c:otherwise>
                                                 </c:choose>

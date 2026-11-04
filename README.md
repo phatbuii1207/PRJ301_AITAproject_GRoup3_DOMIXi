@@ -14,6 +14,11 @@ Hệ thống Hỗ trợ Giảng viên và Sinh viên trong việc kiểm tra, đ
 
 ## Docker Sandbox cho bài nộp Java
 
+Bộ chấm test case đã nối với sandbox: quản lý test công khai/ẩn, so stdout, tính
+điểm theo trọng số trên thang 10 và lưu kết quả. Chạy migration
+`database/migrations/001_test_case_grading.sql`, rồi xem
+[hướng dẫn chấm điểm](docs/TEST_CASE_GRADING.md). Module chấm này không cần API key.
+
 Bài ZIP Java được biên dịch/chạy trong container Java 8 non-root, không có mạng ra ngoài,
 giới hạn 128 MiB RAM, 0.5 CPU và 5 giây. Build image trước khi dùng:
 

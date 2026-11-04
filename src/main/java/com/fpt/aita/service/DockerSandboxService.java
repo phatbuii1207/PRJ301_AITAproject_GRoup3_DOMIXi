@@ -64,7 +64,7 @@ public final class DockerSandboxService {
             Capture created = run(createCommand(name, workspace.getSources(), mainClass),
                     new byte[0], TIMEOUT_MS, 8192);
             if (created.exitCode != 0 || created.timedOut || created.limitExceeded
-                    || !created.output.trim().matches("[a-f0-9]{64}")) {
+                    || !created.errorOutput.isEmpty() || !created.output.trim().matches("[a-f0-9]{64}")) {
                 outcome = result(Status.SANDBOX_UNAVAILABLE,
                         "Không tạo được sandbox. Kiểm tra Docker và image aita-sandbox:java8 đã build.", 0);
             } else {
@@ -79,7 +79,8 @@ public final class DockerSandboxService {
                 else if (execution.exitCode == 65) status = Status.COMPILE_ERROR;
                 else if (execution.exitCode == 70 || execution.exitCode >= 128) status = Status.RUNTIME_ERROR;
                 else status = Status.SANDBOX_UNAVAILABLE;
-                outcome = result(status, execution.output, elapsed);
+                outcome = new SandboxResult(status, status == Status.SUCCESS ? execution.output : execution.combined(),
+                        execution.errorOutput, elapsed);
             }
         } catch (SandboxWorkspace.InvalidSubmissionException ex) {
             outcome = result(Status.INVALID_SUBMISSION, ex.getMessage(), 0);
@@ -127,7 +128,7 @@ public final class DockerSandboxService {
     private boolean removeContainer(String name) {
         try {
             Capture removed = run(Arrays.asList("docker", "rm", "--force", name), new byte[0], 2000, 8192);
-            return !removed.timedOut && (removed.exitCode == 0 || removed.output.contains("No such container"));
+            return !removed.timedOut && (removed.exitCode == 0 || removed.combined().contains("No such container"));
         } catch (IOException ex) {
             LOG.log(Level.WARNING, "Cannot contact Docker to remove sandbox", ex);
         } catch (InterruptedException ex) {
@@ -138,17 +139,25 @@ public final class DockerSandboxService {
 
     private Capture run(List<String> command, final byte[] input, long timeout, int limit)
             throws IOException, InterruptedException {
-        final Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        final Process process = new ProcessBuilder(command).start();
         final BoundedOutput output = new BoundedOutput(limit);
         Thread reader = new Thread(new Runnable() {
             @Override public void run() {
                 try (InputStream stream = process.getInputStream()) {
                     byte[] buffer = new byte[4096];
                     int n;
-                    while ((n = stream.read(buffer)) != -1) output.append(buffer, n);
+                    while ((n = stream.read(buffer)) != -1) output.append(buffer, n, false);
                 } catch (IOException ex) { output.readFailed.set(true); }
             }
         }, "aita-sandbox-output");
+        Thread errorReader = new Thread(new Runnable() {
+            @Override public void run() {
+                try (InputStream stream = process.getErrorStream()) {
+                    byte[] buffer = new byte[4096]; int n;
+                    while ((n = stream.read(buffer)) != -1) output.append(buffer, n, true);
+                } catch (IOException ex) { output.readFailed.set(true); }
+            }
+        }, "aita-sandbox-stderr");
         Thread writer = new Thread(new Runnable() {
             @Override public void run() {
                 try (java.io.OutputStream stream = process.getOutputStream()) { stream.write(input); }
@@ -156,8 +165,10 @@ public final class DockerSandboxService {
             }
         }, "aita-sandbox-input");
         reader.setDaemon(true);
+        errorReader.setDaemon(true);
         writer.setDaemon(true);
         reader.start();
+        errorReader.start();
         writer.start();
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeout);
         boolean timedOut = false;
@@ -171,16 +182,18 @@ public final class DockerSandboxService {
                 process.waitFor(500, TimeUnit.MILLISECONDS);
             }
             reader.join(500);
+            errorReader.join(500);
             writer.join(500);
-            if (reader.isAlive()) throw new IOException("Sandbox output stream did not close");
+            if (reader.isAlive() || errorReader.isAlive()) throw new IOException("Sandbox output stream did not close");
             if (output.readFailed.get() && !timedOut && !output.exceeded.get()) {
                 throw new IOException("Cannot read sandbox output");
             }
             int exit = process.isAlive() ? -1 : process.exitValue();
-            return new Capture(exit, timedOut, output.exceeded.get(), output.text());
+            return new Capture(exit, timedOut, output.exceeded.get(), output.text(false), output.text(true));
         } finally {
             if (process.isAlive()) process.destroyForcibly();
             try { process.getInputStream().close(); } catch (IOException ignored) { }
+            try { process.getErrorStream().close(); } catch (IOException ignored) { }
             try { process.getOutputStream().close(); } catch (IOException ignored) { }
         }
     }
@@ -198,32 +211,36 @@ public final class DockerSandboxService {
         final boolean timedOut;
         final boolean limitExceeded;
         final String output;
-        Capture(int exit, boolean timedOut, boolean exceeded, String output) {
+        final String errorOutput;
+        Capture(int exit, boolean timedOut, boolean exceeded, String output, String errorOutput) {
             this.exitCode = exit;
             this.timedOut = timedOut;
             this.limitExceeded = exceeded;
             this.output = output;
+            this.errorOutput = errorOutput;
         }
+        String combined() { return output + errorOutput; }
     }
 
     private static final class BoundedOutput {
         final AtomicBoolean exceeded = new AtomicBoolean();
         final AtomicBoolean readFailed = new AtomicBoolean();
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        private final ByteArrayOutputStream errors = new ByteArrayOutputStream();
         private final int limit;
         BoundedOutput(int limit) { this.limit = limit; }
-        synchronized void append(byte[] buffer, int length) {
-            int remaining = limit - bytes.size();
-            bytes.write(buffer, 0, Math.min(remaining, length));
+        synchronized void append(byte[] buffer, int length, boolean stderr) {
+            int remaining = limit - bytes.size() - errors.size();
+            (stderr ? errors : bytes).write(buffer, 0, Math.min(remaining, length));
             if (length > remaining) exceeded.set(true);
         }
-        synchronized String text() {
+        synchronized String text(boolean stderr) {
             try {
                 // Discard invalid/truncated UTF-8 rather than expanding it into replacement bytes.
                 return StandardCharsets.UTF_8.newDecoder()
                         .onMalformedInput(java.nio.charset.CodingErrorAction.IGNORE)
                         .onUnmappableCharacter(java.nio.charset.CodingErrorAction.IGNORE)
-                        .decode(java.nio.ByteBuffer.wrap(bytes.toByteArray())).toString();
+                        .decode(java.nio.ByteBuffer.wrap((stderr ? errors : bytes).toByteArray())).toString();
             } catch (java.nio.charset.CharacterCodingException impossibleWithIgnore) {
                 throw new IllegalStateException(impossibleWithIgnore);
             }

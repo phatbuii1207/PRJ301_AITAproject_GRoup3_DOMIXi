@@ -1,0 +1,12 @@
+<style>
+body{font:16px/1.5 system-ui,sans-serif;background:#f1f5f9;color:#172033;margin:0;padding:24px}
+main{max-width:1050px;margin:auto}a{color:#0369a1}h1{font-size:26px}h2{font-size:19px}
+.card{background:white;padding:22px;border:1px solid #dbe3ee;border-radius:12px;margin:18px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}label{display:block;font-weight:600;margin:8px 0}
+input,textarea,select{box-sizing:border-box;width:100%;padding:10px;border:1px solid #94a3b8;border-radius:6px;font:inherit}
+textarea{font:14px/1.4 monospace;min-height:110px}button,.button{display:inline-block;padding:10px 16px;border:0;border-radius:7px;background:#0369a1;color:white;cursor:pointer;text-decoration:none;margin:6px 4px 6px 0}
+button.secondary{background:#475569}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;background:#f8fafc;padding:12px;border-radius:6px}
+.notice{background:#e0f2fe;padding:14px;border-radius:8px}.score{font-size:30px;font-weight:750}.muted{color:#475569}
+.case-heading{display:flex;gap:12px;align-items:center;justify-content:space-between}.badge{font-size:13px;background:#e2e8f0;padding:5px 9px;border-radius:6px}
+@media(max-width:650px){body{padding:12px}.grid{grid-template-columns:1fr}.card{padding:14px}}
+</style>
