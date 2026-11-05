@@ -80,4 +80,24 @@ public class PostgresJdbcIT {
             if(source!=null){Files.deleteIfExists(source);Files.deleteIfExists(source.getParent());}
         }
     }
+    @Test public void concurrentLoginClosesAllClientConnections() throws Exception {
+        try(Connection observer=DBContext.openConnection()) {
+            int baseline=connectionCount(observer);UserDAO shared=new UserDAO();
+            java.util.concurrent.ExecutorService workers=java.util.concurrent.Executors.newFixedThreadPool(6);
+            try {
+                List<java.util.concurrent.Future<Boolean>> jobs=new ArrayList<>();
+                for(int n=0;n<48;n++)jobs.add(workers.submit(()->shared.login("gv_namhn","123456")!=null));
+                for(java.util.concurrent.Future<Boolean> job:jobs)assertTrue(job.get(30,java.util.concurrent.TimeUnit.SECONDS));
+            } finally {workers.shutdownNow();}
+            for(int n=0;n<30 && connectionCount(observer)>baseline;n++)Thread.sleep(50);
+            assertEquals("Login left database clients behind",baseline,connectionCount(observer));
+        }
+    }
+    private int connectionCount(Connection observer)throws Exception {
+        try(Statement s=observer.createStatement();ResultSet r=s.executeQuery(
+                "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND application_name='AITA'")) {
+            r.next();return r.getInt(1);
+        }
+    }
+
 }

@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.AiOptimization;
 import com.fpt.aita.model.AnalysisReport;
 import com.fpt.aita.model.Issue;
@@ -30,7 +32,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "JOIN \"USERS\" u ON s.student_id = u.user_id "
                    + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE ar.submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -58,7 +60,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "JOIN \"USERS\" u ON s.student_id = u.user_id "
                    + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE ar.report_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, reportId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -97,7 +99,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "        ELSE 4 "
                    + "    END, "
                    + "    i.line_number ASC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, reportId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -132,7 +134,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "        ELSE 4 "
                    + "    END, "
                    + "    i.line_number ASC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -160,7 +162,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "JOIN \"ANALYSIS_REPORTS\" ar ON sf.submission_id = ar.submission_id "
                    + "WHERE ar.report_id = ? "
                    + "ORDER BY o.optimization_id ASC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, reportId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -203,7 +205,7 @@ public class AnalysisReportDAO extends DBContext {
      */
     public boolean hasReport(int submissionId) {
         String sql = "SELECT 1 FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
@@ -224,7 +226,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "LEFT JOIN \"ANALYSIS_REPORTS\" ar ON s.submission_id = ar.submission_id "
                    + "WHERE a.course_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -249,7 +251,7 @@ public class AnalysisReportDAO extends DBContext {
                          + "FROM \"ISSUES\" i "
                          + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
                          + "WHERE sf.submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sqlIssues)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlIssues)) {
             ps.setInt(1, r.getSubmissionId());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -261,7 +263,7 @@ public class AnalysisReportDAO extends DBContext {
         } catch (SQLException ignored) {}
 
         String sqlLoc = "SELECT COALESCE(SUM(loc), 0) AS total_loc FROM \"SOURCE_FILES\" WHERE submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sqlLoc)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlLoc)) {
             ps.setInt(1, r.getSubmissionId());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -385,7 +387,7 @@ public class AnalysisReportDAO extends DBContext {
 
     public int insertSourceFile(int submissionId, String fileName, int loc) {
         String sql = "INSERT INTO \"SOURCE_FILES\" (submission_id, file_name, file_type, loc) VALUES (?, ?, 'java', ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, submissionId);
             ps.setString(2, fileName);
             ps.setInt(3, loc);
@@ -405,7 +407,7 @@ public class AnalysisReportDAO extends DBContext {
                             int loopDepth, int cyclomaticComplexity, String estimatedComplexity, boolean isRecursive) {
         String sql = "INSERT INTO \"METHODS\" (file_id, method_name, start_line, end_line, loop_depth, "
                    + "cyclomatic_complexity, estimated_complexity, is_recursive) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, fileId);
             ps.setString(2, methodName);
             ps.setInt(3, startLine);
@@ -428,7 +430,7 @@ public class AnalysisReportDAO extends DBContext {
 
     public int getRuleIdByCode(String ruleCode) {
         String sql = "SELECT rule_id FROM \"RULES\" WHERE rule_code = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, ruleCode);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt("rule_id");
@@ -443,7 +445,7 @@ public class AnalysisReportDAO extends DBContext {
                                String severity, String message, String aiExplanation) {
         String sql = "INSERT INTO \"ISSUES\" (file_id, method_id, rule_id, line_number, severity, message, ai_explanation) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, fileId);
             if (methodId != null && methodId > 0) {
                 ps.setInt(2, methodId);
@@ -464,14 +466,14 @@ public class AnalysisReportDAO extends DBContext {
 
     public int insertAnalysisReport(int submissionId, int qualityScore, int totalIssues) {
         String deleteSql = "DELETE FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(deleteSql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(deleteSql)) {
             ps.setInt(1, submissionId);
             ps.executeUpdate();
         } catch (SQLException ignored) {}
 
         String sql = "INSERT INTO \"ANALYSIS_REPORTS\" (submission_id, quality_score, total_issues, created_at) "
                    + "VALUES (?, ?, ?, LOCALTIMESTAMP)";
-        try (PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, submissionId);
             ps.setInt(2, qualityScore);
             ps.setInt(3, totalIssues);
@@ -488,7 +490,7 @@ public class AnalysisReportDAO extends DBContext {
     }
 
     public void cleanOldAnalysisData(int submissionId) {
-        try (PreparedStatement ps1 = connection.prepareStatement("DELETE FROM \"SOURCE_FILES\" WHERE submission_id = ?");
+        try (Connection connection = openConnection(); PreparedStatement ps1 = connection.prepareStatement("DELETE FROM \"SOURCE_FILES\" WHERE submission_id = ?");
              PreparedStatement ps2 = connection.prepareStatement("DELETE FROM \"ANALYSIS_REPORTS\" WHERE submission_id = ?")) {
             ps1.setInt(1, submissionId);
             ps1.executeUpdate();

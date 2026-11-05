@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.Course;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -76,8 +78,8 @@ public class CourseDAO extends DBContext {
         List<Course> list = new ArrayList<>();
         // Ưu tiên 1: Bảng COURSES chuẩn (PRJ301, CSD201, PRO192, DBI202)
         String sqlCourses = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" ORDER BY course_id ASC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlCourses);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlCourses)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Course(
@@ -97,8 +99,8 @@ public class CourseDAO extends DBContext {
 
         // Ưu tiên 2: Fallback sang bảng CLASSES
         String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" ORDER BY class_id ASC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlClasses);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlClasses)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(mapResultSetToCourse(rs));
@@ -117,8 +119,8 @@ public class CourseDAO extends DBContext {
      */
     public Course getCourseById(int id) {
         String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" WHERE course_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlCourse);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlCourse)) {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -135,8 +137,8 @@ public class CourseDAO extends DBContext {
         }
 
         String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" WHERE class_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlClasses);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlClasses)) {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -163,8 +165,8 @@ public class CourseDAO extends DBContext {
         List<Course> list = new ArrayList<>();
         String sqlCourse = "SELECT course_id, course_code, course_name, description, badge, total_slots FROM \"COURSES\" "
                          + "WHERE course_code ILIKE ? OR course_name ILIKE ? OR description ILIKE ? ORDER BY course_id ASC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlCourse);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlCourse)) {
             String term = "%" + keyword.trim() + "%";
             ps.setString(1, term);
             ps.setString(2, term);
@@ -188,8 +190,8 @@ public class CourseDAO extends DBContext {
 
         String sqlClasses = "SELECT class_id, class_code, class_name FROM \"CLASSES\" "
                          + "WHERE class_name ILIKE ? OR class_code ILIKE ? ORDER BY class_id ASC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlClasses);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlClasses)) {
             String term = "%" + keyword.trim() + "%";
             ps.setString(1, term);
             ps.setString(2, term);
@@ -224,7 +226,7 @@ public class CourseDAO extends DBContext {
                    + "JOIN \"USER_CLASS\" uc ON c.class_id = uc.class_id "
                    + "WHERE uc.user_id = ? "
                    + "ORDER BY c.class_id ASC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -255,7 +257,7 @@ public class CourseDAO extends DBContext {
                    + "JOIN \"USER_CLASS\" uc ON c.class_id = uc.class_id "
                    + "WHERE uc.user_id = ? AND (c.class_name ILIKE ? OR c.class_code ILIKE ?) "
                    + "ORDER BY c.class_id ASC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             String term = "%" + keyword.trim() + "%";
             ps.setInt(1, userId);
             ps.setString(2, term);
@@ -288,8 +290,8 @@ public class CourseDAO extends DBContext {
      */
     public boolean insertCourse(Course c) {
         String sql = "INSERT INTO \"CLASSES\" (class_code, class_name) VALUES (?, ?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             // class_code: mã lớp (nếu chưa có thì tạo mặc định), class_name: mã môn học
             ps.setString(1, "SE" + (1800 + c.getCourseId()));
             ps.setString(2, c.getCourseCode());
@@ -305,8 +307,8 @@ public class CourseDAO extends DBContext {
      */
     public boolean updateCourse(Course c) {
         String sql = "UPDATE \"CLASSES\" SET class_name = ? WHERE class_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, c.getCourseCode());
             ps.setInt(2, c.getCourseId());
             return ps.executeUpdate() > 0;
@@ -321,8 +323,8 @@ public class CourseDAO extends DBContext {
      */
     public boolean deleteCourse(int id) {
         String sql = "DELETE FROM \"CLASSES\" WHERE class_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {

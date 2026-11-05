@@ -35,6 +35,15 @@ chưa phải kết quả chấm đúng/sai đáp án.
 Tập báo cáo bằng [kịch bản thuyết trình, giải thích code và demo](docs/HUONG_DAN_BAO_CAO_SANDBOX.md):
 chạy `./scripts/demo-sandbox.sh all` để thử 7 ca và tạo ZIP mẫu dùng trên web.
 
+## Nhóm dùng Supabase trên Windows
+
+Pull code rồi làm theo [hướng dẫn Supabase / NetBeans Windows](docs/SUPABASE_WINDOWS.md):
+Stop Tomcat, chạy `scripts/configure-supabase.ps1` với `.env` riêng đang có,
+đặt đường dẫn cấu hình tuyệt đối và Clean and Build/Run lại. Không cần Docker để
+kết nối database. Bản sửa đóng JDBC sau từng thao tác và phân biệt lỗi database với
+sai mật khẩu. `.env.example` hiện là mẫu Supabase cổng 6543; phần PostgreSQL local
+bên dưới dành cho người muốn tự dựng database riêng.
+
 ## 🚀 Hướng dẫn Cài đặt & Chạy ứng dụng
 1. **Thiết lập PostgreSQL (không cần Docker):**
    - Cài PostgreSQL 16 và tạo database `AST_CodeAnalysisDB` bằng pgAdmin/DBeaver.

@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.AiOptimization;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
@@ -195,31 +197,19 @@ public class AiOptimizationDAO extends DBContext {
      * Cung cấp cho các class bên ngoài package dal để tránh truy cập trực tiếp field protected.
      */
     public boolean isConnected() {
-        return connection != null;
+        try (Connection probe = openConnection()) { return probe.isValid(5); }
+        catch (SQLException ex) { return false; }
     }
 
-    /**
-     * Đóng kết nối CSDL an toàn.
-     */
-    public void closeConnection() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException e) {
-            System.err.println("Lỗi đóng kết nối: " + e.getMessage());
-        }
-    }
+    /** Compatibility: operations now close their own connections. */
+    public void closeConnection() { }
 
     /**
      * Cập nhật điểm chất lượng (quality_score) trong bảng ANALYSIS_REPORTS sau khi AI chấm điểm theo Rubric.
      */
     public boolean updateAnalysisReportQualityScore(int submissionId, int qualityScore) {
-        if (connection == null) {
-            return false;
-        }
         String sql = "UPDATE \"ANALYSIS_REPORTS\" SET quality_score = ? WHERE submission_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, qualityScore);
             ps.setInt(2, submissionId);
             return ps.executeUpdate() > 0;
@@ -233,12 +223,12 @@ public class AiOptimizationDAO extends DBContext {
      * 1. Thêm mới bản ghi tối ưu hóa vào bảng AI_OPTIMIZATIONS.
      */
     public boolean insertOptimization(AiOptimization o) {
-        if (o == null || connection == null) {
+        if (o == null) {
             return false;
         }
         String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, o.getMethodId());
             ps.setString(2, o.getOriginalCode());
             ps.setString(3, o.getOptimizedCode());
@@ -256,12 +246,9 @@ public class AiOptimizationDAO extends DBContext {
      * 2. Lấy bản ghi tối ưu hóa theo method_id.
      */
     public AiOptimization getByMethodId(int methodId) {
-        if (connection == null) {
-            return null;
-        }
         String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
                 + "FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ? ORDER BY created_at DESC LIMIT 1";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -279,16 +266,13 @@ public class AiOptimizationDAO extends DBContext {
      */
     public List<AiOptimization> getBySubmissionId(int submissionId) {
         List<AiOptimization> list = new ArrayList<AiOptimization>();
-        if (connection == null) {
-            return list;
-        }
         String sql = "SELECT o.optimization_id, o.method_id, o.original_code, o.optimized_code, o.explanation, o.new_complexity, o.created_at "
                 + "FROM \"AI_OPTIMIZATIONS\" o "
                 + "INNER JOIN \"METHODS\" m ON o.method_id = m.method_id "
                 + "INNER JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
                 + "WHERE sf.submission_id = ? "
                 + "ORDER BY o.created_at DESC";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -305,14 +289,14 @@ public class AiOptimizationDAO extends DBContext {
      * 3. Tìm bản ghi mới nhất có original_code giống hệt (dùng làm bộ nhớ đệm cache).
      */
     public AiOptimization findByOriginalCode(String code) {
-        if (code == null || code.trim().isEmpty() || connection == null) {
+        if (code == null || code.trim().isEmpty()) {
             return null;
         }
         String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
                 + "FROM \"AI_OPTIMIZATIONS\" "
                 + "WHERE CAST(original_code AS TEXT) = CAST(? AS TEXT) "
                 + "ORDER BY created_at DESC LIMIT 1";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, code);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -329,11 +313,8 @@ public class AiOptimizationDAO extends DBContext {
      * 4. Cập nhật giải thích từ AI vào bảng ISSUES.ai_explanation.
      */
     public boolean updateIssueAiExplanation(int issueId, String text) {
-        if (connection == null) {
-            return false;
-        }
         String sql = "UPDATE \"ISSUES\" SET ai_explanation = ? WHERE issue_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, text);
             ps.setInt(2, issueId);
             return ps.executeUpdate() > 0;
@@ -349,9 +330,6 @@ public class AiOptimizationDAO extends DBContext {
      */
     public List<MethodWithIssuesDTO> getMethodsWithIssues(int submissionId) {
         List<MethodWithIssuesDTO> methods = new ArrayList<MethodWithIssuesDTO>();
-        if (connection == null) {
-            return methods;
-        }
 
         // Lấy danh sách các phương thức thuộc bài nộp
         String sqlMethods = "SELECT m.method_id, m.file_id, sf.file_name, m.method_name, "
@@ -361,7 +339,7 @@ public class AiOptimizationDAO extends DBContext {
                 + "WHERE sf.submission_id = ? "
                 + "ORDER BY sf.file_id, m.start_line";
 
-        try (PreparedStatement psMethod = connection.prepareStatement(sqlMethods)) {
+        try (Connection connection = openConnection(); PreparedStatement psMethod = connection.prepareStatement(sqlMethods)) {
             psMethod.setInt(1, submissionId);
             try (ResultSet rsMethod = psMethod.executeQuery()) {
                 while (rsMethod.next()) {
@@ -389,7 +367,7 @@ public class AiOptimizationDAO extends DBContext {
                     + "INNER JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
                     + "WHERE sf.submission_id = ? AND i.method_id IS NOT NULL";
 
-            try (PreparedStatement psIssue = connection.prepareStatement(sqlIssues)) {
+            try (Connection connection = openConnection(); PreparedStatement psIssue = connection.prepareStatement(sqlIssues)) {
                 psIssue.setInt(1, submissionId);
                 try (ResultSet rsIssue = psIssue.executeQuery()) {
                     while (rsIssue.next()) {
@@ -423,11 +401,8 @@ public class AiOptimizationDAO extends DBContext {
      * 6. Kiểm tra xem đã có bản ghi tối ưu hóa cho method này chưa (tránh ghi trùng).
      */
     public boolean existsForMethod(int methodId) {
-        if (connection == null) {
-            return false;
-        }
         String sql = "SELECT 1 FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
@@ -462,7 +437,7 @@ public class AiOptimizationDAO extends DBContext {
         System.out.println("=== KIỂM THỬ AiOptimizationDAO VỚI CƠ SỞ DỮ LIỆU ===");
         AiOptimizationDAO dao = new AiOptimizationDAO();
 
-        if (dao.connection == null) {
+        if (!dao.isConnected()) {
             System.err.println("Không thể kết nối PostgreSQL. Kiểm tra DB_URL, DB_USER, DB_PASSWORD và dịch vụ database.");
             return;
         }
@@ -525,12 +500,7 @@ public class AiOptimizationDAO extends DBContext {
             }
 
         } finally {
-            try {
-                if (dao.connection != null && !dao.connection.isClosed()) {
-                    dao.connection.close();
-                }
-            } catch (SQLException ignored) {
-            }
+            dao.closeConnection();
         }
     }
 }

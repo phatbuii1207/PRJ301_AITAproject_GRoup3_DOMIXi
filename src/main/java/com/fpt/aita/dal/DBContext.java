@@ -8,14 +8,8 @@ import java.util.Properties;
 
 /** Shared PostgreSQL JDBC configuration. No credentials or SQL Server fallback in source. */
 public class DBContext implements AutoCloseable {
-    protected Connection connection;
-
-    public DBContext() {
-        try { connection = openConnection(); }
-        catch (SQLException ex) {
-            System.err.println("Không kết nối được PostgreSQL. Kiểm tra DB_URL, DB_USER, DB_PASSWORD / AITA_ENV_FILE. SQLState=" + ex.getSQLState());
-        }
-    }
+    // DAOs are stateless: constructing one never opens or retains a database session.
+    public DBContext() { }
 
     public static Connection openConnection() throws SQLException {
         String url = AppConfig.get("DB_URL", "jdbc:postgresql://" + AppConfig.get("DB_HOST", "localhost")
@@ -31,8 +25,9 @@ public class DBContext implements AutoCloseable {
         properties.setProperty("ApplicationName", "AITA");
         return DriverManager.getConnection(url, properties);
     }
-    public Connection getConnection() { return connection; }
-    @Override public void close() throws SQLException { if (connection != null) connection.close(); }
+    /** Caller owns and must close this connection. Prefer openConnection() explicitly. */
+    public Connection getConnection() throws SQLException { return openConnection(); }
+    @Override public void close() throws SQLException { /* No retained connection. */ }
     public static void main(String[] args) throws SQLException {
         try (Connection db = openConnection()) {
             System.out.println("KẾT NỐI POSTGRESQL THÀNH CÔNG: " + db.getMetaData().getDatabaseProductName());

@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.Assignment;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,8 +17,8 @@ public class AssignmentDAO extends DBContext {
                 + "FROM \"ASSIGNMENTS\" a "
                 + "JOIN \"USERS\" u ON a.lecturer_id = u.user_id "
                 + "ORDER BY a.assignment_id DESC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Assignment(
@@ -40,8 +42,8 @@ public class AssignmentDAO extends DBContext {
                 + "FROM \"ASSIGNMENTS\" a "
                 + "JOIN \"USERS\" u ON a.lecturer_id = u.user_id "
                 + "WHERE a.assignment_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -65,8 +67,8 @@ public class AssignmentDAO extends DBContext {
     // 3. CREATE: Thêm bài tập mới vào PostgreSQL
     public boolean insertAssignment(Assignment a) {
         String sql = "INSERT INTO \"ASSIGNMENTS\" (lecturer_id, title, description) VALUES (?, ?, ?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, a.getLecturerId());
             ps.setString(2, a.getTitle());
             ps.setString(3, a.getDescription());
@@ -80,8 +82,8 @@ public class AssignmentDAO extends DBContext {
     // 4. UPDATE: Cập nhật thông tin bài tập
     public boolean updateAssignment(Assignment a) {
         String sql = "UPDATE \"ASSIGNMENTS\" SET title = ?, description = ? WHERE assignment_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, a.getTitle());
             ps.setString(2, a.getDescription());
             ps.setInt(3, a.getAssignmentId());
@@ -95,7 +97,7 @@ public class AssignmentDAO extends DBContext {
     // 4b. UPDATE TOÀN DIỆN: Cập nhật tiêu đề, mô tả và hạn nộp (Deadline) của bài tập
     public boolean updateAssignmentFull(Assignment a) {
         String sql = "UPDATE \"ASSIGNMENTS\" SET title = ?, description = ?, deadline = ? WHERE assignment_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, a.getTitle());
             ps.setString(2, a.getDescription());
             ps.setTimestamp(3, a.getDeadline());
@@ -110,8 +112,8 @@ public class AssignmentDAO extends DBContext {
     // 5. DELETE: Xóa bài tập theo ID
     public boolean deleteAssignment(int id) {
         String sql = "DELETE FROM \"ASSIGNMENTS\" WHERE assignment_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
@@ -136,8 +138,8 @@ public class AssignmentDAO extends DBContext {
                              + "WHERE a.course_id = ? "
                              + "ORDER BY a.assignment_id DESC";
 
-        try {
-            PreparedStatement ps = connection.prepareStatement(sqlWithCourse);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sqlWithCourse)) {
             ps.setInt(1, courseId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -163,8 +165,8 @@ public class AssignmentDAO extends DBContext {
     // 7. Thêm bài tập mới có liên kết course_id và deadline
     public boolean insertAssignmentWithCourse(Assignment a) {
         String sql = "INSERT INTO \"ASSIGNMENTS\" (lecturer_id, title, description, course_id, deadline) VALUES (?, ?, ?, ?, ?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, a.getLecturerId());
             ps.setString(2, a.getTitle());
             ps.setString(3, a.getDescription());
@@ -181,8 +183,8 @@ public class AssignmentDAO extends DBContext {
     // 8. Giảng viên cập nhật Deadline của bài tập
     public boolean updateDeadline(int assignmentId, java.sql.Timestamp deadline) {
         String sql = "UPDATE \"ASSIGNMENTS\" SET deadline = ? WHERE assignment_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setTimestamp(1, deadline);
             ps.setInt(2, assignmentId);
             return ps.executeUpdate() > 0;

@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.Submission;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,8 +19,8 @@ public class SubmissionDAO extends DBContext {
     public boolean insertSubmission(Submission s) {
         String sql = "INSERT INTO \"SUBMISSIONS\" (student_id, assignment_id, file_path, sha256_hash, file_size, submitted_at, status) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, s.getStudentId());
             ps.setInt(2, s.getAssignmentId());
             ps.setString(3, s.getFilePath());
@@ -46,8 +48,8 @@ public class SubmissionDAO extends DBContext {
      */
     public boolean updateSubmissionStatus(int submissionId, String status) {
         String sql = "UPDATE \"SUBMISSIONS\" SET status = ? WHERE submission_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, status);
             ps.setInt(2, submissionId);
             return ps.executeUpdate() > 0;
@@ -68,8 +70,8 @@ public class SubmissionDAO extends DBContext {
                    + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.student_id = ? AND s.assignment_id = ? "
                    + "ORDER BY s.submitted_at DESC LIMIT 1";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, studentId);
             ps.setInt(2, assignmentId);
             ResultSet rs = ps.executeQuery();
@@ -105,8 +107,8 @@ public class SubmissionDAO extends DBContext {
                    + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.student_id = ? AND a.course_id = ? "
                    + "ORDER BY s.submitted_at ASC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, studentId);
             ps.setInt(2, courseId);
             ResultSet rs = ps.executeQuery();
@@ -143,8 +145,8 @@ public class SubmissionDAO extends DBContext {
                    + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.assignment_id = ? "
                    + "ORDER BY s.submitted_at DESC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, assignmentId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -177,8 +179,8 @@ public class SubmissionDAO extends DBContext {
                    + "JOIN \"USERS\" u ON s.student_id = u.user_id "
                    + "LEFT JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE s.submission_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, submissionId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -213,8 +215,8 @@ public class SubmissionDAO extends DBContext {
                    + "JOIN \"ASSIGNMENTS\" a ON s.assignment_id = a.assignment_id "
                    + "WHERE a.course_id = ? "
                    + "ORDER BY s.submitted_at DESC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {

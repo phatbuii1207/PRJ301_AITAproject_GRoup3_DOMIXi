@@ -1,5 +1,7 @@
 package com.fpt.aita.dal;
 
+import java.sql.Connection;
+
 import com.fpt.aita.model.User;
 import com.fpt.aita.util.PasswordUtil;
 import java.sql.PreparedStatement;
@@ -19,8 +21,8 @@ public class UserDAO extends DBContext {
                 + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
                 + "FROM \"USERS\" u "
                 + "WHERE LOWER(u.username) = LOWER(?) AND u.password_hash = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, username);
             ps.setString(2, PasswordUtil.sha256Hex(password));
             ResultSet rs = ps.executeQuery();
@@ -33,8 +35,8 @@ public class UserDAO extends DBContext {
                         rs.getString("role"),
                         (Integer) rs.getObject("class_id"));
             }
-        } catch (Exception e) {
-            System.err.println("Lỗi đăng nhập: " + e.getMessage());
+        } catch (java.sql.SQLException ex) {
+            throw new DatabaseUnavailableException(ex);
         }
         return null; // Đăng nhập thất bại
     }
@@ -45,8 +47,8 @@ public class UserDAO extends DBContext {
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
                 + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
                 + "FROM \"USERS\" u ORDER BY u.user_id DESC";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new User(
@@ -68,8 +70,8 @@ public class UserDAO extends DBContext {
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
                 + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
                 + "FROM \"USERS\" u WHERE u.user_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -92,8 +94,8 @@ public class UserDAO extends DBContext {
         String sql = "SELECT u.user_id, u.username, u.password_hash, u.full_name, u.role, "
                 + "(SELECT uc.class_id FROM \"USER_CLASS\" uc WHERE uc.user_id = u.user_id ORDER BY uc.class_id LIMIT 1) AS class_id "
                 + "FROM \"USERS\" u WHERE LOWER(u.username) = LOWER(?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, username);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -114,8 +116,8 @@ public class UserDAO extends DBContext {
     // 5. CREATE: Thêm mới User vào CSDL (bảng USERS và liên kết USER_CLASS nếu có)
     public boolean insertUser(User user) {
         String sql = "INSERT INTO \"USERS\" (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getPasswordHash());
             ps.setString(3, user.getFullName());
@@ -142,8 +144,8 @@ public class UserDAO extends DBContext {
     // 6. UPDATE: Cập nhật thông tin User (họ tên, vai trò và lớp học)
     public boolean updateUser(User user) {
         String sql = "UPDATE \"USERS\" SET full_name = ?, role = ? WHERE user_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, user.getFullName());
             ps.setString(2, user.getRole());
             ps.setInt(3, user.getUserId());
@@ -169,8 +171,8 @@ public class UserDAO extends DBContext {
     // 7. UPDATE: Cập nhật / Đổi mật khẩu
     public boolean updatePassword(int userId, String newPasswordHash) {
         String sql = "UPDATE \"USERS\" SET password_hash = ? WHERE user_id = ?";
-        try {
-            PreparedStatement ps = connection.prepareStatement(sql);
+        try (Connection connection = openConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, newPasswordHash);
             ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
@@ -184,7 +186,7 @@ public class UserDAO extends DBContext {
     public boolean deleteUser(int userId) {
         String sqlClass = "DELETE FROM \"USER_CLASS\" WHERE user_id = ?";
         String sqlUser = "DELETE FROM \"USERS\" WHERE user_id = ?";
-        try {
+        try (Connection connection = openConnection()) {
             try (PreparedStatement psClass = connection.prepareStatement(sqlClass)) {
                 psClass.setInt(1, userId);
                 psClass.executeUpdate();
@@ -201,12 +203,8 @@ public class UserDAO extends DBContext {
 
     // 9. Kiểm tra username đã tồn tại trong CSDL chưa
     public boolean isUsernameExists(String username) {
-        if (connection == null) {
-            System.err.println("isUsernameExists: chưa có kết nối CSDL");
-            return true;
-        }
         String sql = "SELECT 1 FROM \"USERS\" WHERE LOWER(username) = LOWER(?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
@@ -219,12 +217,8 @@ public class UserDAO extends DBContext {
 
     // 10. Đăng ký tài khoản người dùng mới (vai trò mặc định Student, không gán class_id trực tiếp trên USERS)
     public boolean register(User u) {
-        if (connection == null) {
-            System.err.println("register: chưa có kết nối CSDL");
-            return false;
-        }
         String sql = "INSERT INTO \"USERS\" (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, u.getUsername());
             ps.setString(2, u.getPasswordHash());
             ps.setString(3, u.getFullName());
@@ -246,8 +240,7 @@ public class UserDAO extends DBContext {
             }
             return false;
         } catch (java.sql.SQLException e) {
-            int errorCode = e.getErrorCode();
-            if (errorCode == 2627 || errorCode == 2601) {
+            if ("23505".equals(e.getSQLState())) {
                 // Vi phạm ràng buộc UNIQUE username
                 return false;
             }
@@ -259,7 +252,7 @@ public class UserDAO extends DBContext {
     // 11. Helper: Gán người dùng vào lớp (USER_CLASS)
     public boolean insertUserClass(int userId, int classId) {
         String sql = "INSERT INTO \"USER_CLASS\" (user_id, class_id) VALUES (?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setInt(2, classId);
             return ps.executeUpdate() > 0;
@@ -272,7 +265,7 @@ public class UserDAO extends DBContext {
     // 11b. Helper: Tự động ghi danh sinh viên mới vào toàn bộ các lớp học hiện có
     public boolean enrollStudentInAllClasses(int userId) {
         String sql = "INSERT INTO \"USER_CLASS\" (user_id, class_id) SELECT ?, class_id FROM \"CLASSES\"";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
@@ -285,7 +278,7 @@ public class UserDAO extends DBContext {
     public List<Integer> getClassIdsByUserId(int userId) {
         List<Integer> list = new ArrayList<>();
         String sql = "SELECT class_id FROM \"USER_CLASS\" WHERE user_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {

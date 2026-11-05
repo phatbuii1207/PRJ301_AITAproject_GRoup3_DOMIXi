@@ -1,5 +1,9 @@
 # PostgreSQL cho cả nhóm AITA
 
+Nhóm dùng database Supabase chung, đặc biệt Windows, xem [các bước cập nhật mới](SUPABASE_WINDOWS.md).
+`.env.example` mặc định là Supabase; nếu dùng PostgreSQL local hãy thay DB_URL và các
+DB_* theo ví dụ local dưới đây trước khi chạy setup.
+
 Ứng dụng dùng Java 8, Tomcat 9 và PostgreSQL JDBC 42.7.14. Thành viên chạy web
 không cần cài Docker để kết nối database. Docker chỉ cần trên máy thực thi sandbox
 nếu muốn chấm bài bằng test case; đăng nhập, CRUD và kết nối JDBC dùng PostgreSQL trực tiếp.

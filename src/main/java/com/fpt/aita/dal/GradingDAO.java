@@ -8,7 +8,7 @@ import java.util.List;
 /** One short-lived connection per request/job; never shared between queue and servlet threads. */
 public final class GradingDAO implements AutoCloseable {
     private final Connection connection;
-    public GradingDAO() throws SQLException { this(new DBContext().connection); }
+    public GradingDAO() throws SQLException { this(DBContext.openConnection()); }
     public GradingDAO(Connection connection) throws SQLException {
         if (connection == null || connection.isClosed()) throw new SQLException("Không kết nối được CSDL chấm bài.");
         this.connection = connection;

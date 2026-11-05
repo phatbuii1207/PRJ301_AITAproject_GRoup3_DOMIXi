@@ -12,3 +12,7 @@ src/main/webapp/uploads/**
 .env
 
 __pycache__/
+
+# Transient private configuration writes and local backups
+.env.tmp
+.env.backup*

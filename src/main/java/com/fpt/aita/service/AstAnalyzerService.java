@@ -437,7 +437,8 @@ public class AstAnalyzerService {
 
         String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
                    + "VALUES (?, ?, ?, ?, 'O(N)', LOCALTIMESTAMP)";
-        try (java.sql.PreparedStatement ps = reportDAO.getConnection().prepareStatement(sql)) {
+        try (java.sql.Connection connection = com.fpt.aita.dal.DBContext.openConnection();
+             java.sql.PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, methodId);
             ps.setString(2, originalCode);
             ps.setString(3, optimizedCode);

@@ -22,4 +22,13 @@ public class AppConfigTest {
             try { AppConfig.read(file);fail("oversized configuration accepted"); } catch(IllegalArgumentException expected) { }
         } finally { Files.deleteIfExists(file);Files.delete(dir); }
     }
+    @Test public void acceptsWindowsUtf8BomAndCrlf() throws Exception {
+        Path file=Files.createTempFile("aita-windows-", ".env");
+        try {
+            Files.write(file,("\uFEFFDB_URL=jdbc:postgresql://example:6543/postgres?sslmode=require&prepareThreshold=0\r\nDB_PASSWORD='a=b#c'\r\n").getBytes(StandardCharsets.UTF_8));
+            assertEquals("jdbc:postgresql://example:6543/postgres?sslmode=require&prepareThreshold=0",AppConfig.read(file).get("DB_URL"));
+            assertEquals("a=b#c",AppConfig.read(file).get("DB_PASSWORD"));
+        } finally {Files.delete(file);}
+    }
+
 }

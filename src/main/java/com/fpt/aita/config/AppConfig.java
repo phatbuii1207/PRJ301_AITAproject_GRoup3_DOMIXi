@@ -40,7 +40,7 @@ public final class AppConfig {
         try {
             if (Files.size(file) > 65536) throw new IllegalArgumentException("Configuration file exceeds 64 KiB");
             for (String raw : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-                String line = raw.trim();
+                String line = (raw.startsWith("\uFEFF") ? raw.substring(1) : raw).trim();
                 if (line.startsWith("export ")) line = line.substring(7).trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 int equals = line.indexOf('=');

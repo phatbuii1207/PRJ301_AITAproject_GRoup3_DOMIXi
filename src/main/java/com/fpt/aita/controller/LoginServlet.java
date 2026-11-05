@@ -1,6 +1,8 @@
 package com.fpt.aita.controller;
 
 import com.fpt.aita.dal.UserDAO;
+import com.fpt.aita.dal.DatabaseUnavailableException;
+import java.sql.SQLException;
 import com.fpt.aita.model.User;
 import java.io.IOException;
 import javax.servlet.ServletException;
@@ -34,8 +36,17 @@ public class LoginServlet extends HttpServlet {
         String p = request.getParameter("password");
         String remember = request.getParameter("remember");
 
-        UserDAO dao = new UserDAO();
-        User user = dao.login(u, p);
+        User user;
+        try (UserDAO dao = createUserDAO()) {
+            user = dao.login(u, p);
+        } catch (DatabaseUnavailableException | SQLException ex) {
+            // A transient database outage is not evidence of an incorrect password.
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.setHeader("Retry-After", "5");
+            request.setAttribute("error", "Tạm thời không kết nối được cơ sở dữ liệu. Vui lòng thử lại sau.");
+            request.getRequestDispatcher("login.jsp").forward(request, response);
+            return;
+        }
 
         if (user != null) {
             // 1. Quản lý trạng thái Session
@@ -60,5 +71,7 @@ public class LoginServlet extends HttpServlet {
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
     }
+    protected UserDAO createUserDAO() { return new UserDAO(); }
+
 }
 
