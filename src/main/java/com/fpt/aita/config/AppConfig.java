@@ -19,8 +19,20 @@ public final class AppConfig {
     }
     private static Map<String, String> fileValues() {
         String explicit = System.getenv("AITA_ENV_FILE");
-        if (explicit == null || explicit.trim().isEmpty()) explicit = System.getProperty("aita.env.file", ".env");
-        return read(Paths.get(explicit));
+        if (explicit == null || explicit.trim().isEmpty()) explicit = System.getProperty("aita.env.file", "");
+        if (!explicit.isEmpty()) return read(Paths.get(explicit));
+        // Search candidate locations so Tomcat finds .env regardless of working directory
+        String[] candidates = {
+            ".env",
+            System.getProperty("user.home") + "/.aita.env",
+            System.getProperty("catalina.base", "") + "/../../.env",
+            System.getProperty("catalina.home", "") + "/../../.env"
+        };
+        for (String c : candidates) {
+            Path p = Paths.get(c).normalize();
+            if (Files.isRegularFile(p)) return read(p);
+        }
+        return new LinkedHashMap<>();
     }
     public static Map<String, String> read(Path file) {
         Map<String, String> values = new LinkedHashMap<>();
