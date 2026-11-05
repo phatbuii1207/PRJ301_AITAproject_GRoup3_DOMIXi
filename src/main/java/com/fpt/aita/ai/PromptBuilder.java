@@ -23,8 +23,23 @@ public class PromptBuilder {
         sb.append("2. Giữ nguyên chữ ký phương thức (tên, kiểu trả về, danh sách tham số) và hành vi nghiệp vụ gốc của phương thức.\n");
         sb.append("3. Chỉ tối ưu thuật toán, sửa lỗi bảo mật hoặc tài nguyên theo đúng danh sách vi phạm được cung cấp.\n");
         sb.append("4. Phản hồi DUY NHẤT một chuỗi JSON hợp lệ, không bọc markdown, không thêm bất kỳ văn bản nào ngoài JSON với định dạng sau:\n");
-        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\"}\n");
-        sb.append("Trong đó: 'new_complexity' biểu diễn độ phức tạp thời gian theo ký pháp Big-O (ví dụ: O(n), O(1), O(n log n)).");
+        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\", \"score\": 8.5}\n");
+        sb.append("Trong đó:\n");
+        sb.append("- 'explanation': Lời giải thích, nhận xét chi tiết kèm đánh giá điểm theo rubric.\n");
+        sb.append("- 'optimized_code': Mã nguồn Java đã tối ưu hoàn chỉnh.\n");
+        sb.append("- 'new_complexity': Ký pháp Big-O sau tối ưu (O(1), O(n), O(n log n)).\n");
+        sb.append("- 'score': Điểm chấm chất lượng cho hàm này theo rubric (thang điểm 0 - 10, số thực).\n\n");
+        sb.append("TIÊU CHÍ CHẤM ĐIỂM THEO RUBRIC LINKEDLIST (Per-Function Grading Rubric):\n");
+        sb.append("1. Core Logic (50%): Hàm hoạt động chính xác trong điều kiện bình thường.\n");
+        sb.append("2. Edge Cases (25%): Xử lý đúng khi danh sách rỗng, 1 phần tử, vị trí đầu/cuối, index không hợp lệ, không tìm thấy.\n");
+        sb.append("3. State & Pointer Management (15%): Cập nhật chính xác head, tail, next, prev, size; không làm đứt gãy liên kết.\n");
+        sb.append("4. Complexity & Quality (10%): Đạt độ phức tạp yêu cầu (O(1) cho addFirst, O(1) cho addLast nếu có tail, O(n) cho search/traverse), code sạch.\n");
+        sb.append("5. Quy tắc trừ điểm nghiêm ngặt:\n");
+        sb.append("   - CẤM dùng thư viện có sẵn (java.util.LinkedList, list.remove(), ...) thay vì tự cài đặt con trỏ -> Chấm 0 điểm!\n");
+        sb.append("   - Hàm để trống / chỉ có khai báo -> Chấm 0 điểm!\n");
+        sb.append("   - Lỗi NullPointerException / crash trong trường hợp bình thường -> Trừ 50% số điểm của hàm.\n");
+        sb.append("   - Lỗi crash trong trường hợp biên (edge case) -> Trừ điểm phần edge cases.\n");
+        sb.append("   - Vòng lặp vô tận hoặc sai chữ ký hàm (tên, tham số, kiểu trả về) -> Trừ 30% đến 50% điểm.");
         return sb.toString();
     }
 
@@ -67,7 +82,8 @@ public class PromptBuilder {
         sb.append(truncateCode(req.getCode()));
         sb.append("\n<<<STUDENT_CODE_END>>>\n\n");
 
-        sb.append("Hãy trả về DUY NHẤT một đối tượng JSON với 3 trường: 'explanation', 'optimized_code', 'new_complexity'.");
+        sb.append("Hãy tham khảo Rubric chấm điểm LinkedList được định nghĩa trong System Instruction để đánh giá hàm này.\n");
+        sb.append("Hãy trả về DUY NHẤT một đối tượng JSON với 4 trường: 'explanation', 'optimized_code', 'new_complexity', 'score'.");
         return sb.toString();
     }
 

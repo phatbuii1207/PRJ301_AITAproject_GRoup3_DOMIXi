@@ -21,12 +21,49 @@ public class AiAnalysisService {
 
     // Danh sách mức độ phức tạp cần phân tích (từ O(N^2) trở lên)
     private static final List<String> COMPLEX_ENOUGH;
+    private static final List<String> RUBRIC_METHODS;
     static {
         COMPLEX_ENOUGH = new ArrayList<String>();
         COMPLEX_ENOUGH.add("O(N^2)");
         COMPLEX_ENOUGH.add("O(N^3)");
         COMPLEX_ENOUGH.add("O(2^N)");
         COMPLEX_ENOUGH.add("O(N!)");
+
+        RUBRIC_METHODS = new ArrayList<String>();
+        RUBRIC_METHODS.add("isempty");
+        RUBRIC_METHODS.add("size");
+        RUBRIC_METHODS.add("addfirst");
+        RUBRIC_METHODS.add("addlast");
+        RUBRIC_METHODS.add("removefirst");
+        RUBRIC_METHODS.add("removelast");
+        RUBRIC_METHODS.add("get");
+        RUBRIC_METHODS.add("getat");
+        RUBRIC_METHODS.add("clear");
+        RUBRIC_METHODS.add("traverse");
+        RUBRIC_METHODS.add("print");
+        RUBRIC_METHODS.add("addat");
+        RUBRIC_METHODS.add("insertat");
+        RUBRIC_METHODS.add("insertafter");
+        RUBRIC_METHODS.add("search");
+        RUBRIC_METHODS.add("contains");
+        RUBRIC_METHODS.add("indexof");
+        RUBRIC_METHODS.add("update");
+        RUBRIC_METHODS.add("set");
+        RUBRIC_METHODS.add("removebyvalue");
+        RUBRIC_METHODS.add("removeat");
+        RUBRIC_METHODS.add("count");
+        RUBRIC_METHODS.add("max");
+        RUBRIC_METHODS.add("min");
+        RUBRIC_METHODS.add("reverse");
+        RUBRIC_METHODS.add("findmiddle");
+        RUBRIC_METHODS.add("removeduplicates");
+        RUBRIC_METHODS.add("mergesorted");
+        RUBRIC_METHODS.add("detectcycle");
+        RUBRIC_METHODS.add("sort");
+        RUBRIC_METHODS.add("removenthfromend");
+        RUBRIC_METHODS.add("ispalindrome");
+        RUBRIC_METHODS.add("findcyclestart");
+        RUBRIC_METHODS.add("getintersection");
     }
 
     private final AiClient aiClient;
@@ -101,9 +138,29 @@ public class AiAnalysisService {
 
         summary.setTotalMethods(toProcess.size());
 
+        List<Double> aiScores = new ArrayList<Double>();
+
         // 5. Xử lý từng method
         for (MethodWithIssuesDTO method : toProcess) {
-            processMethod(submissionId, method, summary);
+            Double mScore = processMethod(submissionId, method, summary);
+            if (mScore != null) {
+                aiScores.add(mScore);
+            }
+        }
+
+        // 6. Nếu có điểm đánh giá từ AI theo Rubric, cập nhật lại quality_score trong ANALYSIS_REPORTS
+        if (!aiScores.isEmpty()) {
+            double sum = 0.0;
+            for (Double s : aiScores) {
+                sum += s;
+            }
+            int avgScore100 = (int) Math.round((sum / aiScores.size()) * 10.0); // Quy đổi từ thang 10 sang thang 100
+            try {
+                dao.updateAnalysisReportQualityScore(submissionId, avgScore100);
+                System.out.println("[AiAnalysisService] Cập nhật quality_score theo Rubric AI: " + avgScore100 + "/100 cho bài nộp #" + submissionId);
+            } catch (Exception ex) {
+                System.err.println("[AiAnalysisService] Lỗi khi cập nhật quality_score theo AI: " + ex.getMessage());
+            }
         }
 
         System.out.println("[AiAnalysisService] Hoàn tất submissionId=" + submissionId + " | " + summary);
@@ -112,8 +169,9 @@ public class AiAnalysisService {
 
     /**
      * Xử lý phân tích một phương thức, bọc try/catch riêng để lỗi không lan rộng.
+     * @return Điểm số do AI chấm theo rubric (nếu có), hoặc null
      */
-    private void processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary) {
+    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary) {
         int methodId = method.getMethodId();
 
         try {
@@ -121,7 +179,7 @@ public class AiAnalysisService {
             if (dao.existsForMethod(methodId)) {
                 System.out.println("[AiAnalysisService] method_id=" + methodId + " đã có tối ưu -> skipped.");
                 summary.incrementSkipped();
-                return;
+                return null;
             }
 
             // Đọc mã nguồn của phương thức từ file đã giải nén
@@ -144,7 +202,7 @@ public class AiAnalysisService {
                     dao.insertOptimization(reused);
                     updateExplanationForIssues(method.getIssues(), cached.getExplanation());
                     summary.incrementFromCache();
-                    return;
+                    return null;
                 }
             }
 
@@ -157,7 +215,7 @@ public class AiAnalysisService {
             if (!result.isSuccess() || result.getExplanation() == null) {
                 System.err.println("[AiAnalysisService] method_id=" + methodId + " AI trả kết quả không hợp lệ.");
                 summary.incrementFailed();
-                return;
+                return null;
             }
 
             // Lưu vào AI_OPTIMIZATIONS
@@ -173,17 +231,19 @@ public class AiAnalysisService {
             if (!saved) {
                 System.err.println("[AiAnalysisService] method_id=" + methodId + " ghi DB thất bại.");
                 summary.incrementFailed();
-                return;
+                return null;
             }
 
             // Cập nhật ISSUES.ai_explanation cho từng lỗi của method này
             updateExplanationForIssues(method.getIssues(), result.getExplanation());
             summary.incrementAnalyzed();
+            return result.getScore();
 
         } catch (Exception e) {
             // Mỗi method bọc try/catch riêng: lỗi không làm dừng toàn bộ vòng lặp
             System.err.println("[AiAnalysisService] method_id=" + methodId + " xảy ra ngoại lệ: " + e.getMessage());
             summary.incrementFailed();
+            return null;
         }
     }
 
@@ -204,16 +264,24 @@ public class AiAnalysisService {
     /**
      * Lọc method đủ điều kiện phân tích:
      * - Có lỗi mức Critical hoặc Warning, HOẶC
-     * - Độ phức tạp từ O(N^2) trở lên.
+     * - Độ phức tạp từ O(N^2) trở lên, HOẶC
+     * - Thuộc danh sách hàm trong Rubric LinkedList cần AI chấm điểm.
      */
     private List<MethodWithIssuesDTO> filterEligibleMethods(List<MethodWithIssuesDTO> methods) {
         List<MethodWithIssuesDTO> eligible = new ArrayList<MethodWithIssuesDTO>();
         for (MethodWithIssuesDTO m : methods) {
-            if (hasCriticalOrWarning(m) || isHighComplexity(m.getEstimatedComplexity())) {
+            if (hasCriticalOrWarning(m) || isHighComplexity(m.getEstimatedComplexity()) || isRubricMethod(m.getMethodName())) {
                 eligible.add(m);
             }
         }
         return eligible;
+    }
+
+    private boolean isRubricMethod(String methodName) {
+        if (methodName == null || methodName.trim().isEmpty()) {
+            return false;
+        }
+        return RUBRIC_METHODS.contains(methodName.trim().toLowerCase());
     }
 
     /**

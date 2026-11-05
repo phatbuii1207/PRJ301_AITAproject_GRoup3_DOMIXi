@@ -84,7 +84,7 @@ public class AstAnalyzerService {
 
             if (javaFiles.isEmpty()) {
                 System.out.println("AstAnalyzer: Không tìm thấy file mã nguồn .java trong bài nộp #" + submissionId);
-                reportDAO.insertAnalysisReport(submissionId, 100, 0);
+                reportDAO.insertAnalysisReport(submissionId, 0, 0);
                 return true;
             }
 
@@ -96,11 +96,14 @@ public class AstAnalyzerService {
             int ruleCode01 = reportDAO.getRuleIdByCode("CODE01"); // Cyclomatic Complexity > 10
             int ruleCode02 = reportDAO.getRuleIdByCode("CODE02"); // God Method (> 50 lines)
             int ruleNam01 = reportDAO.getRuleIdByCode("NAM01");   // Naming convention
+            int ruleLL01 = reportDAO.getRuleIdByCode("LL01");     // Cấm dùng thư viện LinkedList có sẵn
+            int ruleLL02 = reportDAO.getRuleIdByCode("LL02");     // Hàm rỗng / thiếu xử lý con trỏ
 
             int totalIssuesCount = 0;
             int criticalCount = 0;
             int warningCount = 0;
             int infoCount = 0;
+            int totalMethodsParsed = 0;
 
             for (File jf : javaFiles) {
                 List<String> lines = Files.readAllLines(jf.toPath(), StandardCharsets.UTF_8);
@@ -110,21 +113,35 @@ public class AstAnalyzerService {
                 int fileId = reportDAO.insertSourceFile(submissionId, fileName, loc);
                 if (fileId <= 0) continue;
 
+                // Kiểm tra Rule LL01: Sử dụng thư viện có sẵn java.util.LinkedList (Cấm theo Rubric)
+                for (int lineIdx = 0; lineIdx < lines.size(); lineIdx++) {
+                    String lineText = lines.get(lineIdx).trim();
+                    if (lineText.contains("import java.util.LinkedList") || lineText.contains("java.util.LinkedList")
+                            || (lineText.contains("LinkedList") && lineText.contains("new LinkedList"))) {
+                        reportDAO.insertIssue(fileId, null, ruleLL01, lineIdx + 1, "Critical",
+                                "[Rubric LinkedList] Phát hiện sử dụng thư viện có sẵn java.util.LinkedList thay vì tự xây dựng cấu trúc con trỏ Node.",
+                                "Theo Rubric: Bị phạt nặng và chấm 0 điểm cho phần cài đặt danh sách liên kết. Hãy tự tạo lớp Node và quản trị con trỏ head, tail.");
+                        totalIssuesCount++;
+                        criticalCount++;
+                    }
+                }
+
                 CompilationUnit cu;
                 try {
                     cu = StaticJavaParser.parse(jf);
                 } catch (Exception parseEx) {
                     System.err.println("Lỗi cú pháp khi parse AST file " + fileName + ": " + parseEx.getMessage());
                     // Ghi nhận lỗi cú pháp
-                    reportDAO.insertIssue(fileId, null, ruleCode01, 1, "Warning",
+                    reportDAO.insertIssue(fileId, null, ruleCode01, 1, "Critical",
                             "File có lỗi cú pháp biên dịch: " + parseEx.getMessage(),
                             "Kiểm tra lại cú pháp Java của file để trình biên dịch có thể sinh cây AST hoàn chỉnh.");
                     totalIssuesCount++;
-                    warningCount++;
+                    criticalCount++;
                     continue;
                 }
 
                 List<MethodDeclaration> methods = cu.findAll(MethodDeclaration.class);
+                totalMethodsParsed += methods.size();
                 for (MethodDeclaration md : methods) {
                     String methodName = md.getNameAsString();
                     int startLine = md.getBegin().map(p -> p.line).orElse(1);
@@ -217,12 +234,31 @@ public class AstAnalyzerService {
                         totalIssuesCount++;
                         infoCount++;
                     }
+
+                    // Rule LL02: Hàm rỗng hoặc chỉ có khai báo (Deduction: 0 điểm cho hàm theo Rubric)
+                    boolean isEmptyBody = !md.getBody().isPresent() 
+                            || md.getBody().get().getStatements().isEmpty()
+                            || (md.getBody().get().getStatements().size() == 1 && md.getBody().get().getStatement(0).isReturnStmt()
+                                && !md.getBody().get().getStatement(0).asReturnStmt().getExpression().isPresent());
+                    if (isEmptyBody) {
+                        reportDAO.insertIssue(fileId, methodId, ruleLL02, startLine, "Warning",
+                                "[Rubric LinkedList] Hàm '" + methodName + "' để trống hoặc chưa có mã nguồn hiện thực.",
+                                "Theo Rubric: Hàm để trống hoặc chỉ có khai báo nhận 0 điểm. Hãy hoàn thiện nội dung xử lý của hàm.");
+                        totalIssuesCount++;
+                        warningCount++;
+                    }
                 }
             }
 
             // Tính điểm chất lượng mã nguồn (Quality Score): tối đa 100
-            int penalty = (criticalCount * 25) + (warningCount * 10) + (infoCount * 5);
-            int qualityScore = Math.max(0, 100 - penalty);
+            // Nếu không có hàm nào được hiện thực trong toàn bộ bài nộp -> 0 điểm
+            int qualityScore;
+            if (totalMethodsParsed == 0) {
+                qualityScore = 0;
+            } else {
+                int penalty = (criticalCount * 25) + (warningCount * 10) + (infoCount * 5);
+                qualityScore = Math.max(0, 100 - penalty);
+            }
 
             // Ghi báo cáo tổng hợp vào bảng ANALYSIS_REPORTS
             reportDAO.insertAnalysisReport(submissionId, qualityScore, totalIssuesCount);

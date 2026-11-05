@@ -14,30 +14,48 @@ public class AiResult implements Serializable {
     private String optimizedCode;    // Mã nguồn sau khi đã được tối ưu hóa
     private String newComplexity;    // Độ phức tạp mới sau tối ưu (ví dụ: O(n))
     private String errorMessage;     // Thông báo lỗi nếu việc phân tích thất bại
+    private Double score;            // Điểm số AI chấm theo rubric (tùy chọn)
 
     public AiResult() {
     }
 
     public AiResult(boolean success, String explanation, String optimizedCode, String newComplexity, String errorMessage) {
+        this(success, explanation, optimizedCode, newComplexity, errorMessage, null);
+    }
+
+    public AiResult(boolean success, String explanation, String optimizedCode, String newComplexity, String errorMessage, Double score) {
         this.success = success;
         this.explanation = explanation;
         this.optimizedCode = optimizedCode;
         this.newComplexity = newComplexity;
         this.errorMessage = errorMessage;
+        this.score = score;
     }
 
     /**
      * Tạo kết quả thành công nhanh.
      */
     public static AiResult success(String explanation, String optimizedCode, String newComplexity) {
-        return new AiResult(true, explanation, optimizedCode, newComplexity, null);
+        return new AiResult(true, explanation, optimizedCode, newComplexity, null, null);
+    }
+
+    public static AiResult success(String explanation, String optimizedCode, String newComplexity, Double score) {
+        return new AiResult(true, explanation, optimizedCode, newComplexity, null, score);
     }
 
     /**
      * Tạo kết quả thất bại nhanh.
      */
     public static AiResult failure(String errorMessage) {
-        return new AiResult(false, null, null, null, errorMessage);
+        return new AiResult(false, null, null, null, errorMessage, null);
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
     }
 
     public boolean isSuccess() {

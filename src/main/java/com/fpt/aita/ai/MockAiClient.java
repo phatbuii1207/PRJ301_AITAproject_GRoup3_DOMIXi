@@ -21,6 +21,35 @@ public class MockAiClient implements AiClient {
                 : "processData";
 
         // Tùy theo ruleCode trả về giải thích sư phạm và code tối ưu phù hợp
+        if ("LL01".equalsIgnoreCase(primaryRule)) {
+            String explanation = "[Rubric LinkedList - Vi phạm CẤM] Phát hiện sử dụng thư viện có sẵn java.util.LinkedList "
+                    + "hoặc Collection thay vì tự xây dựng cấu trúc danh sách liên kết bằng con trỏ Node. "
+                    + "Theo Rubric: Bị phạt điểm tối đa (0 điểm cho tiêu chí này). "
+                    + "Khắc phục: Tự khai báo class Node { int data; Node next; } và quản trị con trỏ head, tail thủ công.";
+            String optimizedCode = "class Node {\n"
+                    + "    int data;\n"
+                    + "    Node next;\n"
+                    + "    Node(int data) { this.data = data; this.next = null; }\n"
+                    + "}\n"
+                    + "public class MyLinkedList {\n"
+                    + "    private Node head, tail;\n"
+                    + "    private int size;\n"
+                    + "    // Cài đặt con trỏ độc lập không import thư viện sẵn\n"
+                    + "}";
+            return AiResult.success(explanation, optimizedCode, "O(1)", 0.0);
+        }
+
+        if ("LL02".equalsIgnoreCase(primaryRule)) {
+            String explanation = "[Rubric LinkedList - Thiếu hàm cốt lõi] Phát hiện hàm để trống hoặc chưa hoàn thiện logic. "
+                    + "Theo Rubric: Hàm rỗng hoặc chỉ có khai báo bị chấm 0 điểm. "
+                    + "Khắc phục: Cần hiện thực đầy đủ xử lý trường hợp danh sách rỗng (head == null) và cập nhật kích thước size.";
+            String optimizedCode = "public void " + methodName + "() {\n"
+                    + "    if (head == null) return;\n"
+                    + "    // Xử lý logic nghiệp vụ và cập nhật con trỏ\n"
+                    + "}";
+            return AiResult.success(explanation, optimizedCode, "O(1)", 0.0);
+        }
+
         if ("PERF01".equalsIgnoreCase(primaryRule)) {
             String explanation = "Phương thức '" + methodName + "' đang sử dụng vòng lặp lồng nhau (nested loops) "
                     + "để tìm kiếm hoặc so khớp phần tử, dẫn đến độ phức tạp O(n^2). "
@@ -77,17 +106,20 @@ public class MockAiClient implements AiClient {
             return AiResult.success(explanation, optimizedCode, "O(n)");
         }
 
-        // Trường hợp mặc định nếu không khớp rule cụ thể
-        String defaultExplanation = "Phương thức '" + methodName + "' đã được kiểm tra sơ bộ. "
-                + "Khuyến nghị: Rà soát điều kiện biên, kiểm tra null trước khi gọi phương thức, "
-                + "và tối ưu hóa thuật toán để đạt hiệu năng tốt hơn.";
+        // Trường hợp mặc định nếu không khớp rule cụ thể (Đánh giá theo Rubric LinkedList)
+        String defaultExplanation = "[Rubric LinkedList - Đánh giá AI] Phương thức '" + methodName + "' "
+                + "đã được rà soát theo tiêu chí Rubric: Core logic (50%), Edge cases (25%), State & Pointer management (15%), Complexity (10%). "
+                + "Khuyến nghị: Luôn kiểm tra điều kiện biên khi danh sách rỗng (head == null) hoặc 1 phần tử, đảm bảo liên kết next không bị rò rỉ rác bộ nhớ.";
 
         String defaultOptimizedCode = req.getCode() != null ? req.getCode() : "// Không có mã nguồn gốc";
         String currentComplexity = (req.getEstimatedComplexity() != null && !req.getEstimatedComplexity().isEmpty())
                 ? req.getEstimatedComplexity()
                 : "O(n)";
 
-        return AiResult.success(defaultExplanation, defaultOptimizedCode, currentComplexity);
+        // Giả lập điểm theo mức độ phức tạp và lỗi
+        double estimatedScore = "O(1)".equalsIgnoreCase(currentComplexity) ? 8.5 : 7.0;
+
+        return AiResult.success(defaultExplanation, defaultOptimizedCode, currentComplexity, estimatedScore);
     }
 
     /**

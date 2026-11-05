@@ -212,6 +212,24 @@ public class AiOptimizationDAO extends DBContext {
     }
 
     /**
+     * Cập nhật điểm chất lượng (quality_score) trong bảng ANALYSIS_REPORTS sau khi AI chấm điểm theo Rubric.
+     */
+    public boolean updateAnalysisReportQualityScore(int submissionId, int qualityScore) {
+        if (connection == null) {
+            return false;
+        }
+        String sql = "UPDATE \"ANALYSIS_REPORTS\" SET quality_score = ? WHERE submission_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, qualityScore);
+            ps.setInt(2, submissionId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi updateAnalysisReportQualityScore: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
      * 1. Thêm mới bản ghi tối ưu hóa vào bảng AI_OPTIMIZATIONS.
      */
     public boolean insertOptimization(AiOptimization o) {

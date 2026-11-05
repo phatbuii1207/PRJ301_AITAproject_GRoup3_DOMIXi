@@ -66,7 +66,14 @@ public class AiResponseParser {
             throw new AiException("Trường 'new_complexity' trong JSON bị rỗng", false);
         }
 
-        return AiResult.success(explanation, optimizedCode, newComplexity);
+        Double score = null;
+        if (jsonObj.has("score") && !jsonObj.get("score").isJsonNull()) {
+            try {
+                score = jsonObj.get("score").getAsDouble();
+            } catch (Exception ignored) {}
+        }
+
+        return AiResult.success(explanation, optimizedCode, newComplexity, score);
     }
 
     /**
