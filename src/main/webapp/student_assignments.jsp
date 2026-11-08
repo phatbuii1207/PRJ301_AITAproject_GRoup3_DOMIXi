@@ -359,11 +359,11 @@
             </div>
 
             <div class="form-group">
-                <label>Chọn tệp mã nguồn Java (.zip hoặc .java):</label>
+                <label>Chọn tệp mã nguồn Java .java:</label>
                 <div class="file-dropzone" onclick="document.getElementById('fileInput').click()">
                     <span style="font-size: 28px;">📦</span>
                     <p id="fileNameDisplay">Nhấp để chọn tệp tải lên hoặc kéo thả vào đây</p>
-                    <small style="color: #64748b;">Hỗ trợ: .zip, .java (Dung lượng tối đa: 15MB)</small>
+                    <small style="color: #64748b;">Hỗ trợ: .java (Dung lượng tối đa: 15MB)</small>
                 </div>
                 <input type="file" id="fileInput" name="submissionFile" accept=".zip,.java" style="display: none;" onchange="handleFileSelected(this)" />
                 <input type="hidden" name="fileName" id="hiddenFileName" value="" />

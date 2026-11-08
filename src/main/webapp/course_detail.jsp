@@ -795,8 +795,8 @@
                     </div>
                     <div class="drop-title">Kéo & thả file bài làm vào đây</div>
                     <div class="drop-sub">hoặc <span class="drop-browse" onclick="triggerFileInput(event)">chọn tệp từ máy tính</span></div>
-                    <div class="drop-types">Hỗ trợ: .zip, .rar, .tar.gz, .java, .pdf, .docx, .sql (Tối đa 50MB)</div>
-                    <div class="drop-types">Chấm tự động ZIP Java theo bộ test giảng viên cấu hình; giới hạn biên dịch + chạy 5 giây mỗi test.</div>
+                    <div class="drop-types">Hỗ trợ: .java (Tối đa 50MB)</div>
+                    <div class="drop-types">Chấm tự động theo bộ test giảng viên cấu hình; giới hạn biên dịch + chạy 5 giây mỗi test.</div>
                 </div>
 
                 <!-- KHUNG XEM TRƯỚC FILE ĐÃ CHỌN -->
