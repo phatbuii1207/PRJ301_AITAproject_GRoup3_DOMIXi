@@ -12,6 +12,40 @@ public class PromptBuilder {
     private static final int MAX_CODE_LENGTH = 4000;
 
     /**
+     * Điểm tối đa của từng hàm theo linkedlist_rubric_en.md.
+     */
+    public static double getMaxPoints(String methodName) {
+        if (methodName == null) return 1.0;
+        String normalized = methodName.trim().toLowerCase();
+        if ("removeLast".equalsIgnoreCase(normalized)
+                || "removelast".equalsIgnoreCase(normalized)
+                || "addAt".equalsIgnoreCase(normalized) || "addat".equalsIgnoreCase(normalized)
+                || "insertAt".equalsIgnoreCase(normalized) || "insertat".equalsIgnoreCase(normalized)
+                || "insertAfter".equalsIgnoreCase(normalized) || "insertafter".equalsIgnoreCase(normalized)
+                || "search".equals(normalized) || "contains".equals(normalized) || "indexOf".equals(normalized) || "indexof".equals(normalized)
+                || "update".equals(normalized) || "set".equals(normalized)
+                || "removeByValue".equalsIgnoreCase(normalized) || "removebyvalue".equalsIgnoreCase(normalized)
+                || "removeAt".equalsIgnoreCase(normalized) || "removeat".equalsIgnoreCase(normalized)
+                || "count".equals(normalized) || "max".equals(normalized) || "min".equals(normalized)) {
+            return 1.5;
+        }
+        if ("reverse".equals(normalized) || "findMiddle".equalsIgnoreCase(normalized) || "findmiddle".equals(normalized)
+                || "removeDuplicates".equalsIgnoreCase(normalized) || "removeduplicates".equals(normalized)
+                || "mergeSorted".equalsIgnoreCase(normalized) || "mergesorted".equals(normalized)
+                || "detectCycle".equalsIgnoreCase(normalized) || "detectcycle".equals(normalized)) {
+            return 2.0;
+        }
+        if ("sort".equals(normalized)) return 3.0;
+        if ("removeNthFromEnd".equalsIgnoreCase(normalized) || "removenthfromend".equals(normalized)
+                || "isPalindrome".equalsIgnoreCase(normalized) || "ispalindrome".equals(normalized)
+                || "findCycleStart".equalsIgnoreCase(normalized) || "findcyclestart".equals(normalized)
+                || "getIntersection".equalsIgnoreCase(normalized) || "getintersection".equals(normalized)) {
+            return 2.5;
+        }
+        return 1.0;
+    }
+
+    /**
      * Tạo system instruction định hình vai trò và nguyên tắc phản hồi của LLM.
      */
     public static String buildSystemInstruction() {
@@ -23,12 +57,12 @@ public class PromptBuilder {
         sb.append("2. Giữ nguyên chữ ký phương thức (tên, kiểu trả về, danh sách tham số) và hành vi nghiệp vụ gốc của phương thức.\n");
         sb.append("3. Chỉ tối ưu thuật toán, sửa lỗi bảo mật hoặc tài nguyên theo đúng danh sách vi phạm được cung cấp.\n");
         sb.append("4. Phản hồi DUY NHẤT một chuỗi JSON hợp lệ, không bọc markdown, không thêm bất kỳ văn bản nào ngoài JSON với định dạng sau:\n");
-        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\", \"score\": 8.5}\n");
+        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\", \"score\": 0.8}\n");
         sb.append("Trong đó:\n");
         sb.append("- 'explanation': Lời giải thích, nhận xét chi tiết kèm đánh giá điểm theo rubric.\n");
         sb.append("- 'optimized_code': Mã nguồn Java đã tối ưu hoàn chỉnh.\n");
         sb.append("- 'new_complexity': Ký pháp Big-O sau tối ưu (O(1), O(n), O(n log n)).\n");
-        sb.append("- 'score': Điểm chấm chất lượng cho hàm này theo rubric (thang điểm 0 - 10, số thực).\n\n");
+        sb.append("- 'score': Điểm thực tế hàm đạt được theo đúng thang điểm tối đa của hàm. Không trả điểm 0-10 nếu hàm được rubric cho 1, 1.5, 2, 2.5 hoặc 3 điểm.\n\n");
         sb.append("TIÊU CHÍ CHẤM ĐIỂM THEO RUBRIC LINKEDLIST (Per-Function Grading Rubric):\n");
         sb.append("1. Core Logic (50%): Hàm hoạt động chính xác trong điều kiện bình thường.\n");
         sb.append("2. Edge Cases (25%): Xử lý đúng khi danh sách rỗng, 1 phần tử, vị trí đầu/cuối, index không hợp lệ, không tìm thấy.\n");
@@ -40,6 +74,9 @@ public class PromptBuilder {
         sb.append("   - Lỗi NullPointerException / crash trong trường hợp bình thường -> Trừ 50% số điểm của hàm.\n");
         sb.append("   - Lỗi crash trong trường hợp biên (edge case) -> Trừ điểm phần edge cases.\n");
         sb.append("   - Vòng lặp vô tận hoặc sai chữ ký hàm (tên, tham số, kiểu trả về) -> Trừ 30% đến 50% điểm.");
+        sb.append("\n6. Điểm tối đa theo hàm: basic=1.0; removeLast/addAt/insertAt/insertAfter/search/contains/indexOf/update/set/removeByValue/removeAt/count/max/min=1.5; reverse/findMiddle/removeDuplicates/mergeSorted/detectCycle=2.0; sort=3.0; removeNthFromEnd/isPalindrome/findCycleStart/getIntersection=2.5.\n");
+        sb.append("7. Điểm 'score' phải nằm trong khoảng 0 đến điểm tối đa của hàm, dùng các tiêu chí riêng của hàm trong rubric linkedlist_rubric_en.md.\n");
+        sb.append("8. Chấm logic; không chạy test case. Không được cho điểm đầy đủ khi dùng java.util.LinkedList, ArrayList, BST/mảng thay cho Node/head/tail/next theo yêu cầu bài LinkedList.\n");
         return sb.toString();
     }
 
@@ -83,6 +120,7 @@ public class PromptBuilder {
         sb.append("\n<<<STUDENT_CODE_END>>>\n\n");
 
         sb.append("Hãy tham khảo Rubric chấm điểm LinkedList được định nghĩa trong System Instruction để đánh giá hàm này.\n");
+        sb.append("Điểm tối đa của hàm này là ").append(getMaxPoints(req.getMethodName())).append(" theo linkedlist_rubric_en.md.\n");
         sb.append("Hãy trả về DUY NHẤT một đối tượng JSON với 4 trường: 'explanation', 'optimized_code', 'new_complexity', 'score'.");
         return sb.toString();
     }

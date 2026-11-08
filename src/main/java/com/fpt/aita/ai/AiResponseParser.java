@@ -70,7 +70,14 @@ public class AiResponseParser {
         if (jsonObj.has("score") && !jsonObj.get("score").isJsonNull()) {
             try {
                 score = jsonObj.get("score").getAsDouble();
-            } catch (Exception ignored) {}
+                if (!Double.isFinite(score) || score < 0.0) {
+                    throw new AiException("Trường 'score' không hợp lệ (phải là số không âm)", false);
+                }
+            } catch (AiException e) {
+                throw e;
+            } catch (Exception ignored) {
+                score = null;
+            }
         }
 
         return AiResult.success(explanation, optimizedCode, newComplexity, score);

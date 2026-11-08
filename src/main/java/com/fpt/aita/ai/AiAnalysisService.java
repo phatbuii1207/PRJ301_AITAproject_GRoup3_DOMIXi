@@ -139,22 +139,25 @@ public class AiAnalysisService {
         summary.setTotalMethods(toProcess.size());
 
         List<Double> aiScores = new ArrayList<Double>();
+        double earnedPoints = 0.0;
+        double maxPoints = 0.0;
 
         // 5. Xử lý từng method
         for (MethodWithIssuesDTO method : toProcess) {
             Double mScore = processMethod(submissionId, method, summary);
             if (mScore != null) {
                 aiScores.add(mScore);
+                double functionMax = PromptBuilder.getMaxPoints(method.getMethodName());
+                earnedPoints += Math.max(0.0, Math.min(functionMax, mScore));
+                maxPoints += functionMax;
             }
         }
 
         // 6. Nếu có điểm đánh giá từ AI theo Rubric, cập nhật lại quality_score trong ANALYSIS_REPORTS
         if (!aiScores.isEmpty()) {
-            double sum = 0.0;
-            for (Double s : aiScores) {
-                sum += s;
-            }
-            int avgScore100 = (int) Math.round((sum / aiScores.size()) * 10.0); // Quy đổi từ thang 10 sang thang 100
+            int avgScore100 = maxPoints > 0.0
+                    ? (int) Math.round(earnedPoints * 100.0 / maxPoints)
+                    : 0;
             try {
                 dao.updateAnalysisReportQualityScore(submissionId, avgScore100);
                 System.out.println("[AiAnalysisService] Cập nhật quality_score theo Rubric AI: " + avgScore100 + "/100 cho bài nộp #" + submissionId);

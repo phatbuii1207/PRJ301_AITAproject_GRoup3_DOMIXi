@@ -16,8 +16,8 @@ public class AiConfig {
 
     public AiConfig() {
         this.geminiApiKey = readConfig("GEMINI_API_KEY", "");
-        this.geminiModel = readConfig("GEMINI_MODEL", "");
-        this.aiProvider = readConfig("AI_PROVIDER", "mock");
+        this.geminiModel = readConfig("GEMINI_MODEL", "gemini-1.5-flash");
+        this.aiProvider = readConfig("AI_PROVIDER", "gemini");
         this.timeoutMs = parseInt(readConfig("AI_TIMEOUT_MS", "20000"), 20000);
         this.maxRetries = parseInt(readConfig("AI_MAX_RETRIES", "2"), 2);
         this.maxMethodsPerSubmission = parseInt(readConfig("AI_MAX_METHODS_PER_SUBMISSION", "10"), 10);
