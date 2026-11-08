@@ -1,6 +1,7 @@
 package com.fpt.aita.ai;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Xây dựng prompt gửi tới LLM (Gemini).
@@ -14,9 +15,19 @@ public class PromptBuilder {
     /**
      * Điểm tối đa của từng hàm theo linkedlist_rubric_en.md.
      */
+    public static String normalizeRubricType(String rubricType) {
+        String value = rubricType == null ? "NONE" : rubricType.trim().toUpperCase(Locale.ROOT);
+        return "LINKEDLIST".equals(value) || "BST".equals(value) ? value : "NONE";
+    }
+
     public static double getMaxPoints(String methodName) {
+        return getMaxPoints(methodName, "NONE");
+    }
+
+    public static double getMaxPoints(String methodName, String rubricType) {
+        if (!"LINKEDLIST".equals(normalizeRubricType(rubricType))) return 100.0;
         if (methodName == null) return 1.0;
-        String normalized = methodName.trim().toLowerCase();
+        String normalized = methodName.trim().toLowerCase(Locale.ROOT);
         if ("removeLast".equalsIgnoreCase(normalized)
                 || "removelast".equalsIgnoreCase(normalized)
                 || "addAt".equalsIgnoreCase(normalized) || "addat".equalsIgnoreCase(normalized)
@@ -49,6 +60,11 @@ public class PromptBuilder {
      * Tạo system instruction định hình vai trò và nguyên tắc phản hồi của LLM.
      */
     public static String buildSystemInstruction() {
+        return buildSystemInstruction("NONE");
+    }
+
+    public static String buildSystemInstruction(String rubricType) {
+        rubricType = normalizeRubricType(rubricType);
         StringBuilder sb = new StringBuilder();
         sb.append("Bạn là trợ giảng lập trình Java đại học (AITA Tutor). ");
         sb.append("Nhiệm vụ của bạn là phân tích lỗi, giải thích nguyên nhân và đề xuất mã nguồn tối ưu.\n");
@@ -57,12 +73,24 @@ public class PromptBuilder {
         sb.append("2. Giữ nguyên chữ ký phương thức (tên, kiểu trả về, danh sách tham số) và hành vi nghiệp vụ gốc của phương thức.\n");
         sb.append("3. Chỉ tối ưu thuật toán, sửa lỗi bảo mật hoặc tài nguyên theo đúng danh sách vi phạm được cung cấp.\n");
         sb.append("4. Phản hồi DUY NHẤT một chuỗi JSON hợp lệ, không bọc markdown, không thêm bất kỳ văn bản nào ngoài JSON với định dạng sau:\n");
-        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\", \"score\": 0.8}\n");
+        sb.append("{\"explanation\": \"...\", \"optimized_code\": \"...\", \"new_complexity\": \"...\", \"score\": ")
+                .append("LINKEDLIST".equals(rubricType) ? "0.8" : "80")
+                .append("}\n");
         sb.append("Trong đó:\n");
         sb.append("- 'explanation': Lời giải thích, nhận xét chi tiết kèm đánh giá điểm theo rubric.\n");
         sb.append("- 'optimized_code': Mã nguồn Java đã tối ưu hoàn chỉnh.\n");
         sb.append("- 'new_complexity': Ký pháp Big-O sau tối ưu (O(1), O(n), O(n log n)).\n");
-        sb.append("- 'score': Điểm thực tế hàm đạt được theo đúng thang điểm tối đa của hàm. Không trả điểm 0-10 nếu hàm được rubric cho 1, 1.5, 2, 2.5 hoặc 3 điểm.\n\n");
+        sb.append("- 'score': Điểm thực tế từ 0 đến điểm tối đa được nêu trong yêu cầu.\n");
+        if (!"LINKEDLIST".equals(rubricType)) {
+            if ("BST".equals(rubricType)) {
+                sb.append("RUBRIC BST: Đánh giá insert, search, delete, duyệt cây và height theo yêu cầu cây tìm kiếm nhị phân.\n");
+                sb.append("Core Logic (50%): đúng quy tắc thứ tự và thao tác cây. Edge Cases (25%): cây rỗng, khóa trùng, không tìm thấy, xóa gốc/lá/nút có hai con. Quality (25%): độ phức tạp, rõ ràng và bảo trì.\n");
+            } else {
+                sb.append("Đánh giá trung tính theo hành vi của hàm: tính đúng đắn, trường hợp biên, bảo mật và chất lượng mã nguồn; không áp đặt cấu trúc dữ liệu cụ thể.\n");
+            }
+            sb.append("Điểm tối đa mỗi hàm: 100. Điểm chỉ là nhận xét tĩnh của AI, không thay thế kết quả chạy test.\n");
+            return sb.toString();
+        }
         sb.append("TIÊU CHÍ CHẤM ĐIỂM THEO RUBRIC LINKEDLIST (Per-Function Grading Rubric):\n");
         sb.append("1. Core Logic (50%): Hàm hoạt động chính xác trong điều kiện bình thường.\n");
         sb.append("2. Edge Cases (25%): Xử lý đúng khi danh sách rỗng, 1 phần tử, vị trí đầu/cuối, index không hợp lệ, không tìm thấy.\n");
@@ -119,8 +147,14 @@ public class PromptBuilder {
         sb.append(truncateCode(req.getCode()));
         sb.append("\n<<<STUDENT_CODE_END>>>\n\n");
 
-        sb.append("Hãy tham khảo Rubric chấm điểm LinkedList được định nghĩa trong System Instruction để đánh giá hàm này.\n");
-        sb.append("Điểm tối đa của hàm này là ").append(getMaxPoints(req.getMethodName())).append(" theo linkedlist_rubric_en.md.\n");
+        if ("LINKEDLIST".equals(req.getRubricType())) {
+            sb.append("Áp dụng rubric LinkedList trong System Instruction.\n");
+        } else if ("BST".equals(req.getRubricType())) {
+            sb.append("Áp dụng rubric BST trong System Instruction.\n");
+        } else {
+            sb.append("Đánh giá theo hành vi phương thức và các vi phạm đã cung cấp.\n");
+        }
+        sb.append("Điểm tối đa của hàm này là ").append(getMaxPoints(req.getMethodName(), req.getRubricType())).append(".\n");
         sb.append("Hãy trả về DUY NHẤT một đối tượng JSON với 4 trường: 'explanation', 'optimized_code', 'new_complexity', 'score'.");
         return sb.toString();
     }

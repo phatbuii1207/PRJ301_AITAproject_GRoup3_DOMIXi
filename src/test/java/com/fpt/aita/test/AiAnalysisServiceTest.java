@@ -9,6 +9,7 @@ import com.fpt.aita.ai.AiResult;
 import com.fpt.aita.ai.AiRunSummary;
 import com.fpt.aita.ai.MethodCodeProvider;
 import com.fpt.aita.dal.AiOptimizationDAO;
+import com.fpt.aita.dal.AnalysisReportDAO;
 import com.fpt.aita.dal.AiOptimizationDAO.IssueDTO;
 import com.fpt.aita.dal.AiOptimizationDAO.MethodWithIssuesDTO;
 import com.fpt.aita.model.AiOptimization;
@@ -56,7 +57,7 @@ public class AiAnalysisServiceTest {
             return AiResult.success(
                     "Tối ưu bằng FakeAiClient cho " + req.getMethodName(),
                     "// Fake optimized code for " + req.getMethodName(),
-                    "O(N)"
+                    "O(N)", 75.0
             );
         }
 
@@ -84,6 +85,18 @@ public class AiAnalysisServiceTest {
             List<MethodWithIssuesDTO> list = submissionMethods.get(submissionId);
             return list != null ? list : Collections.<MethodWithIssuesDTO>emptyList();
         }
+
+        @Override public AiOptimization getByMethodId(int methodId) {
+            for (AiOptimization value : codeCache.values()) if (value.getMethodId() == methodId) return value;
+            return null;
+        }
+
+        @Override public AiOptimization findByOriginalCode(String code, String rubricType) {
+            AiOptimization cached = findByOriginalCode(code);
+            return cached != null && rubricType.equals(cached.getRubricType()) ? cached : null;
+        }
+
+        @Override public boolean updateAnalysisReportQualityScore(int submissionId, int score) { return true; }
 
         @Override
         public boolean existsForMethod(int methodId) {
@@ -170,7 +183,9 @@ public class AiAnalysisServiceTest {
             dao.setupMethods(1, methods);
 
             AiConfig config = new AiConfig();
-            AiAnalysisService service = new AiAnalysisService(clientAlwaysFail, config, provider, dao);
+            AiAnalysisService service = new AiAnalysisService(clientAlwaysFail, config, provider, dao, new AnalysisReportDAO() {
+                @Override public String getRubricTypeBySubmissionId(int id) { return "NONE"; }
+            });
 
             AiRunSummary summary = service.analyzeSubmission(1);
             if (summary != null && summary.getFailed() == 1 && summary.getAnalyzed() == 0) {
@@ -214,7 +229,9 @@ public class AiAnalysisServiceTest {
             dao.setupMethods(2, methods);
 
             AiConfig config = new AiConfig();
-            AiAnalysisService service = new AiAnalysisService(normalClient, config, provider, dao);
+            AiAnalysisService service = new AiAnalysisService(normalClient, config, provider, dao, new AnalysisReportDAO() {
+                @Override public String getRubricTypeBySubmissionId(int id) { return "NONE"; }
+            });
 
             AiRunSummary summary = service.analyzeSubmission(2);
             if (summary != null && summary.getAnalyzed() == 1 && summary.getFromCache() == 1
@@ -251,7 +268,9 @@ public class AiAnalysisServiceTest {
             dao.setupMethods(3, methods);
 
             AiConfig config = new AiConfig(); // Mặc định maxMethods = 10
-            AiAnalysisService service = new AiAnalysisService(client, config, provider, dao);
+            AiAnalysisService service = new AiAnalysisService(client, config, provider, dao, new AnalysisReportDAO() {
+                @Override public String getRubricTypeBySubmissionId(int id) { return "NONE"; }
+            });
 
             AiRunSummary summary = service.analyzeSubmission(3);
             if (summary != null && summary.getTotalMethods() == config.getMaxMethodsPerSubmission()
@@ -295,7 +314,9 @@ public class AiAnalysisServiceTest {
             dao.setupMethods(4, methods);
 
             AiConfig config = new AiConfig();
-            AiAnalysisService service = new AiAnalysisService(retryClient, config, provider, dao);
+            AiAnalysisService service = new AiAnalysisService(retryClient, config, provider, dao, new AnalysisReportDAO() {
+                @Override public String getRubricTypeBySubmissionId(int id) { return "NONE"; }
+            });
 
             AiRunSummary summary = service.analyzeSubmission(4);
             // m1 bị 429 ném ngoại lệ -> service bắt riêng và failed=1, m2 gọi tiếp và thành công -> analyzed=1

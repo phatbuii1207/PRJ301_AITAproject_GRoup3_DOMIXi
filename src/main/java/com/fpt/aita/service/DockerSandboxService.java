@@ -23,6 +23,8 @@ import java.util.logging.Logger;
  */
 public final class DockerSandboxService {
     public static final long TIMEOUT_MS = 5000;
+    public static final long COMPILE_TIMEOUT_MS = 15000;
+    private static final long WATCHDOG_MS = COMPILE_TIMEOUT_MS + TIMEOUT_MS + 3000;
     public static final int OUTPUT_LIMIT_BYTES = 64 * 1024;
     private static final Semaphore SLOTS = new Semaphore(2);
     private static final AtomicBoolean CLEANUP_FAILED = new AtomicBoolean();
@@ -70,11 +72,12 @@ public final class DockerSandboxService {
             } else {
                 executionStarted = System.nanoTime();
                 Capture execution = run(Arrays.asList("docker", "start", "--attach", "--interactive", name),
-                        input, TIMEOUT_MS, OUTPUT_LIMIT_BYTES);
+                        input, WATCHDOG_MS, OUTPUT_LIMIT_BYTES);
                 long elapsed = elapsedMs(executionStarted);
                 Status status;
                 if (execution.limitExceeded) status = Status.OUTPUT_LIMIT_EXCEEDED;
-                else if (execution.timedOut) status = Status.TIME_LIMIT_EXCEEDED;
+                else if (execution.timedOut) status = Status.SANDBOX_UNAVAILABLE;
+                else if (execution.exitCode == 124) status = Status.TIME_LIMIT_EXCEEDED;
                 else if (execution.exitCode == 0) status = Status.SUCCESS;
                 else if (execution.exitCode == 65) status = Status.COMPILE_ERROR;
                 else if (execution.exitCode == 70 || execution.exitCode >= 128) status = Status.RUNTIME_ERROR;
@@ -126,15 +129,24 @@ public final class DockerSandboxService {
     }
 
     private boolean removeContainer(String name) {
+        // Future.cancel(true) and executor.shutdownNow() may interrupt twice.
+        // Finish bounded cleanup before restoring cancellation to the caller.
+        boolean interrupted = Thread.interrupted();
         try {
-            Capture removed = run(Arrays.asList("docker", "rm", "--force", name), new byte[0], 2000, 8192);
-            return !removed.timedOut && (removed.exitCode == 0 || removed.combined().contains("No such container"));
-        } catch (IOException ex) {
-            LOG.log(Level.WARNING, "Cannot contact Docker to remove sandbox", ex);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
+            for (int attempt = 0; attempt < 3; attempt++) {
+                try {
+                    Capture removed = run(Arrays.asList("docker", "rm", "--force", name), new byte[0], 2000, 8192);
+                    if (!removed.timedOut && (removed.exitCode == 0 || removed.combined().contains("No such container"))) return true;
+                } catch (IOException ex) {
+                    LOG.log(Level.WARNING, "Cannot contact Docker to remove sandbox", ex);
+                } catch (InterruptedException ex) {
+                    interrupted = true;
+                }
+            }
+            return false;
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt();
         }
-        return false;
     }
 
     private Capture run(List<String> command, final byte[] input, long timeout, int limit)

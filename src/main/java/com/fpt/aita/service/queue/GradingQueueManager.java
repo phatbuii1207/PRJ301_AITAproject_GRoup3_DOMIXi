@@ -6,6 +6,7 @@ import com.fpt.aita.model.GradingReport;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.service.GradingService;
 import com.fpt.aita.service.SubmissionAnalysisService;
+import com.fpt.aita.util.UploadStorage;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -29,7 +30,7 @@ public final class GradingQueueManager {
     private volatile boolean running = true;
 
     private GradingQueueManager(Path uploadRoot) {
-        this.uploadRoot = uploadRoot.toAbsolutePath().normalize();
+        this.uploadRoot = (uploadRoot != null ? uploadRoot : UploadStorage.getInstance().getUploadDir()).toAbsolutePath().normalize();
         worker = new Thread(() -> {
             while (running) {
                 try {
@@ -72,9 +73,15 @@ public final class GradingQueueManager {
         }
     }
 
-    /** Compatibility with the team's upload API; supplied paths must stay inside the upload root. */
+    /** Compatibility with the team's upload API; supplied paths must stay inside the upload root or fallback root. */
     public boolean enqueue(int submissionId, String absolutePath) {
-        if (absolutePath != null && !uploadRoot.equals(java.nio.file.Paths.get(absolutePath).toAbsolutePath().normalize().getParent())) return false;
+        if (absolutePath != null) {
+            Path parent = java.nio.file.Paths.get(absolutePath).toAbsolutePath().normalize().getParent();
+            boolean insidePrimary = uploadRoot.equals(parent);
+            Path fallback = UploadStorage.getInstance().getFallbackDir();
+            boolean insideFallback = fallback != null && fallback.equals(parent);
+            if (!insidePrimary && !insideFallback) return false;
+        }
         return enqueue(submissionId);
     }
 
@@ -92,19 +99,19 @@ public final class GradingQueueManager {
             if (!hash(archive).equalsIgnoreCase(submission.getSha256Hash())) throw new IllegalArgumentException("Submission hash mismatch");
             boolean zip = archive.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".zip");
             GradingReport report;
-            if (!zip) report = GradingReport.unavailable("NOT_APPLICABLE", "File Java đơn được phân tích AST/AI; chấm test case cần nộp ZIP.");
-            else if (config == null) report = GradingReport.unavailable("NOT_CONFIGURED", "Giảng viên chưa cấu hình test case; chưa tính điểm.");
-            else {
+            try {
                 report = new GradingService().grade(archive, config);
+            } catch (RuntimeException gradingFailure) {
+                report = GradingReport.unavailable("GRADING_ERROR", "Lỗi chấm test case; tiếp tục phân tích AST/AI.");
             }
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             try (GradingDAO dao = new GradingDAO()) { dao.saveReport(id, report); }
             // Optional analysis failures must not replace a valid functional score with GRADING_ERROR.
-            if (!"INVALID_SUBMISSION".equals(report.getVerdict()) && !"GRADING_ERROR".equals(report.getVerdict())) {
+            {
                 details.put(id, "Đã xử lý test case; đang phân tích AST và đề xuất AI...");
                 try {
                     boolean analyzed = new SubmissionAnalysisService().analyze(id, archive);
-                    if (!zip && analyzed) try (GradingDAO dao = new GradingDAO()) { dao.updateStatus(id, "Completed"); }
+                    if (!zip && analyzed && "NOT_CONFIGURED".equals(report.getVerdict())) try (GradingDAO dao = new GradingDAO()) { dao.updateStatus(id, "Completed"); }
                 } catch (Exception analysisFailure) {
                     LOG.warning("Optional AST/AI analysis failed for submission " + id + " (" + analysisFailure.getClass().getSimpleName() + ")");
                 }
@@ -129,19 +136,7 @@ public final class GradingQueueManager {
     }
 
     private Path resolveArchive(String stored) throws Exception {
-        String prefix = "/uploads/submissions/";
-        if (stored == null || !stored.startsWith(prefix)) throw new IllegalArgumentException("Invalid upload path");
-        String name = stored.substring(prefix.length());
-        String lower = name.toLowerCase(java.util.Locale.ROOT);
-        if (name.isEmpty() || name.contains("/") || name.contains("\\") || !(lower.endsWith(".zip") || lower.endsWith(".java"))) {
-            throw new IllegalArgumentException("Invalid archive name");
-        }
-        Path archive = uploadRoot.resolve(name).normalize();
-        if (!archive.getParent().equals(uploadRoot) || !Files.isRegularFile(archive, LinkOption.NOFOLLOW_LINKS)
-                || !archive.toRealPath().getParent().equals(uploadRoot.toRealPath()) || Files.size(archive) > 50L * 1024 * 1024) {
-            throw new IllegalArgumentException("Archive unavailable");
-        }
-        return archive;
+        return UploadStorage.getInstance().resolveArchive(stored);
     }
     private String hash(Path archive) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

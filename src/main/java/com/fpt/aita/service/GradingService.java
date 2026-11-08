@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.io.IOException;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +23,27 @@ public final class GradingService {
 
     public GradingReport grade(Path archive, GradingConfig config) {
         if (config == null) return GradingReport.unavailable("NOT_CONFIGURED", "Giảng viên chưa cấu hình test case cho bài tập.");
+        if (archive != null && archive.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".java")) {
+            if (!config.hasDriver()) return GradingReport.unavailable("NOT_CONFIGURED",
+                    "File Java đơn cần giảng viên cấu hình driver Main và test case; AST/AI vẫn được xử lý.");
+            Path bundle = null;
+            try {
+                bundle = SandboxWorkspace.packageSingleJava(archive, config);
+                return gradeArchive(bundle, config);
+            } catch (SandboxWorkspace.InvalidSubmissionException ex) {
+                return GradingReport.unavailable("INVALID_SUBMISSION", ex.getMessage());
+            } catch (IOException | RuntimeException ex) {
+                return GradingReport.unavailable("GRADING_ERROR", "Không chuẩn bị được workspace driver; giảng viên có thể chấm lại.");
+            } finally {
+                if (bundle != null) try { Files.deleteIfExists(bundle); } catch (IOException ex) {
+                    java.util.logging.Logger.getLogger(GradingService.class.getName()).warning("Cannot remove temporary driver bundle");
+                }
+            }
+        }
+        return gradeArchive(archive, config);
+    }
+
+    private GradingReport gradeArchive(Path archive, GradingConfig config) {
         List<GradingCaseResult> results = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO, earned = BigDecimal.ZERO;
         boolean stop = false, infrastructureFailure = false;

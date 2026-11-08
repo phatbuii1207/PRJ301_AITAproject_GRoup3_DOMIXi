@@ -12,6 +12,7 @@ public class Assignment {
     private String description;
     private Timestamp deadline;  // Thời hạn nộp bài
     private Timestamp createdAt;
+    private String rubricType = "NONE"; // Loại Rubric chấm điểm: NONE, LINKEDLIST, BST
 
     public Assignment() {
     }
@@ -24,6 +25,7 @@ public class Assignment {
         this.title = title;
         this.description = description;
         this.createdAt = createdAt;
+        this.rubricType = "NONE";
     }
 
     // Constructor mở rộng có courseId và deadline (Thành viên 3)
@@ -36,6 +38,13 @@ public class Assignment {
         this.description = description;
         this.deadline = deadline;
         this.createdAt = createdAt;
+        this.rubricType = "NONE";
+    }
+
+    // Constructor mở rộng có rubricType
+    public Assignment(int assignmentId, int lecturerId, String lecturerName, int courseId, String title, String description, Timestamp deadline, Timestamp createdAt, String rubricType) {
+        this(assignmentId, lecturerId, lecturerName, courseId, title, description, deadline, createdAt);
+        setRubricType(rubricType);
     }
 
     public int getAssignmentId() {
@@ -100,6 +109,14 @@ public class Assignment {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRubricType() {
+        return (rubricType == null || rubricType.trim().isEmpty()) ? "NONE" : rubricType.trim();
+    }
+
+    public void setRubricType(String rubricType) {
+        this.rubricType = (rubricType == null || rubricType.trim().isEmpty()) ? "NONE" : rubricType.trim();
     }
 
     /**

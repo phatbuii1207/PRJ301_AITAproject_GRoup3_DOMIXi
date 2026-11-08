@@ -14,6 +14,7 @@ public final class AppConfig {
     public static String get(String key, String fallback) {
         String value = System.getenv(key);
         if (value == null || value.trim().isEmpty()) value = System.getProperty(key);
+        if (value == null || value.trim().isEmpty()) value = System.getProperty(key.toLowerCase(java.util.Locale.ROOT).replace('_', '.'));
         if (value == null || value.trim().isEmpty()) value = fileValues().get(key);
         return value == null || value.trim().isEmpty() ? fallback : value;
     }

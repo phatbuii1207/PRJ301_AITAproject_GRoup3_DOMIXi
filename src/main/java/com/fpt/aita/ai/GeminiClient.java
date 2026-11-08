@@ -42,7 +42,7 @@ public class GeminiClient implements AiClient {
             throw new AiException("Cấu hình Gemini chưa đầy đủ (thiếu provider=gemini, GEMINI_API_KEY hoặc GEMINI_MODEL)", false);
         }
 
-        String systemInstruction = PromptBuilder.buildSystemInstruction();
+        String systemInstruction = PromptBuilder.buildSystemInstruction(req.getRubricType());
         String userPrompt = PromptBuilder.buildUserPrompt(req);
         String requestBodyJson = buildRequestBody(systemInstruction, userPrompt);
 

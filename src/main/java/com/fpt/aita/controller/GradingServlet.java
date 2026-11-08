@@ -21,6 +21,7 @@ public final class GradingServlet extends HttpServlet {
     @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp, true); }
 
     private void handle(HttpServletRequest req, HttpServletResponse resp, boolean post) throws IOException, ServletException {
+        req.setCharacterEncoding("UTF-8");
         resp.setHeader("Cache-Control", "no-store");
         User user = req.getSession(false) == null ? null : (User) req.getSession(false).getAttribute("currentUser");
         if (user == null) { resp.sendRedirect(req.getContextPath() + "/login"); return; }
@@ -67,12 +68,13 @@ public final class GradingServlet extends HttpServlet {
                 if (config != null) for (GradingTestCase t : config.getTests()) if (manager || !t.isHidden()) visible.add(t);
                 req.setAttribute("tests", visible);
                 req.setAttribute("mainClass", config == null ? "Main" : config.getMainClass());
+                req.setAttribute("driverSource", manager && config != null ? config.getDriverSource() : "");
                 req.setAttribute("configVersion", config == null ? 0 : config.getVersion());
                 req.getRequestDispatcher("/WEB-INF/views/grading-tests.jsp").forward(req, resp);
             }
         } catch (NumberFormatException ex) { resp.sendError(400, "Mã bài hoặc dữ liệu số không hợp lệ."); }
         catch (IllegalArgumentException ex) { resp.sendError(400, ex.getMessage()); }
-        catch (SQLException ex) { log("Grading database unavailable: " + ex.getClass().getSimpleName()); resp.sendError(503, "CSDL chấm bài chưa sẵn sàng. Kiểm tra migration 001_test_case_grading.sql."); }
+        catch (SQLException ex) { log("Grading database unavailable: " + ex.getClass().getSimpleName()); resp.sendError(503, "CSDL chấm bài chưa sẵn sàng. Kiểm tra migrations chấm bài (001 và 004)."); }
     }
 
     private GradingConfig parseConfig(HttpServletRequest req) {
@@ -87,6 +89,6 @@ public final class GradingServlet extends HttpServlet {
             if (names[i].trim().isEmpty() && inputs[i].isEmpty() && expected[i].isEmpty()) continue;
             tests.add(new GradingTestCase(names[i], inputs[i], expected[i], new BigDecimal(weights[i]), "true".equals(hidden[i])));
         }
-        return new GradingConfig(req.getParameter("mainClass"), Integer.parseInt(req.getParameter("version")), tests);
+        return new GradingConfig(req.getParameter("mainClass"), Integer.parseInt(req.getParameter("version")), tests, req.getParameter("driverSource"));
     }
 }

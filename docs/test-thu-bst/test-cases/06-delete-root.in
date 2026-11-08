@@ -1,0 +1,9 @@
+insert 5
+insert 3
+insert 7
+insert 6
+insert 8
+delete 5
+inorder
+search 5
+height

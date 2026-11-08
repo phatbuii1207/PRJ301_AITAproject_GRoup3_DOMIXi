@@ -20,10 +20,10 @@ public class PostgresJdbcIT {
             assertEquals("PostgreSQL",c.getMetaData().getDatabaseProductName());
         }
     }
-    @Test public void schemaHasAllFifteenTablesAndNinetyThreeAttributes() throws Exception {
+    @Test public void schemaHasAllFifteenTablesAndRubricCacheAttributes() throws Exception {
         try(Connection c=DBContext.openConnection(); Statement s=c.createStatement(); ResultSet r=s.executeQuery(
                 "SELECT count(DISTINCT table_name),count(*) FROM information_schema.columns WHERE table_schema='public'")) {
-            assertTrue(r.next());assertEquals(15,r.getInt(1));assertEquals(93,r.getInt(2));
+            assertTrue(r.next());assertEquals(15,r.getInt(1));assertEquals(97,r.getInt(2));
         }
     }
     @Test public void daoCrudGradingTransactionsAndAstAiRoundTrip() throws Exception {
@@ -39,26 +39,40 @@ public class PostgresJdbcIT {
             assertFalse(courses.searchCourses("prj").isEmpty());assertTrue(users.insertUserClass(user,course));
             assertFalse(courses.getCoursesByUserId(user).isEmpty());assertTrue(grading.isCourseMember(user,course));
             Assignment a=new Assignment();a.setLecturerId(user);a.setTitle(marker);a.setDescription("Unicode tiếng Việt");a.setCourseId(course);
+            a.setRubricType("BST");
             assertTrue(assignments.insertAssignmentWithCourse(a));
+            assertTrue(a.getAssignmentId()>0);
+            assertTrue(assignments.updateRubricType(a.getAssignmentId(),"BST"));
             for(Assignment item:assignments.getAssignmentsByCourse(course))if(marker.equals(item.getTitle()))assignment=item.getAssignmentId();
-            assertTrue(assignment>0);a=assignments.getAssignmentById(assignment);assertEquals("Unicode tiếng Việt",a.getDescription());
+            assertTrue(assignment>0);a=assignments.getAssignmentById(assignment);assertEquals("Unicode tiếng Việt",a.getDescription());assertEquals("BST",a.getRubricType());
             a.setTitle(marker+" updated");assertTrue(assignments.updateAssignmentFull(a));assertNotNull(grading.findAssignment(assignment));
             Submission sub=new Submission();sub.setStudentId(user);sub.setAssignmentId(assignment);sub.setFilePath("test/Main.java");sub.setSha256Hash(String.join("", Collections.nCopies(64,"a")));sub.setStatus("Pending");
             assertTrue(submissions.insertSubmission(sub));submission=sub.getSubmissionId();assertTrue(submission>0);
+            assertEquals("BST",analysis.getRubricTypeBySubmissionId(submission));
+            assertEquals("NONE",analysis.getRubricTypeBySubmissionId(-1));
+            assertEquals(-1,analysis.getRuleIdByCode("MISSING_RULE_FOR_TEST"));
+            assertTrue(analysis.getRuleIdByCode("LL01")>0);assertTrue(analysis.getRuleIdByCode("LL02")>0);
             assertEquals(submission,submissions.getLatestSubmission(user,assignment).getSubmissionId());
             assertFalse(submissions.getSubmissionsByAssignment(assignment).isEmpty());assertFalse(submissions.getStudentSubmissionsForCourse(user,course).isEmpty());
             assertFalse(submissions.getSubmissionsMapByCourse(course).isEmpty());assertNotNull(submissions.getSubmissionById(submission));
             GradingTestCase hidden=new GradingTestCase("Test ẩn tiếng Việt","2 3","5",new BigDecimal("2.50"),true);
-            grading.saveConfig(assignment,new GradingConfig("Main",0,Arrays.asList(hidden)));
+            String driver="public class Main { public static void main(String[] args) { System.out.println(1); } }";
+            grading.saveConfig(assignment,new GradingConfig("Main",0,Arrays.asList(hidden),driver));
+            assertEquals(driver,grading.loadConfig(assignment).getDriverSource());
             assertTrue(grading.loadConfig(assignment).getTests().get(0).isHidden());
-            try { grading.saveConfig(assignment,new GradingConfig("Main",0,Arrays.asList(hidden)));fail("stale config accepted"); } catch(IllegalArgumentException expected) { }
+            try {
+                grading.saveConfig(assignment,new GradingConfig("Main",0,Arrays.asList(hidden),driver));
+                fail("stale config accepted");
+            } catch(IllegalArgumentException expected) { }
             assertEquals(1,grading.loadConfig(assignment).getVersion());
+            assertEquals(driver,grading.loadConfig(assignment).getDriverSource());
             GradingReport report=new GradingReport("ACCEPTED","Main",1,new BigDecimal("10.00"),"Đúng",Arrays.asList(
                     new GradingCaseResult(1,hidden,GradingCaseResult.Verdict.ACCEPTED,"5","",123)));
             grading.saveReport(submission,report);GradingReport restored=grading.loadReport(submission);
             assertEquals(new BigDecimal("10.00"),restored.getScore());assertEquals("",restored.forStudent().getCases().get(0).getInput());
             grading.saveConfig(assignment,new GradingConfig("Main",1,Arrays.asList(new GradingTestCase("new","","other",BigDecimal.ONE,false))));
             assertEquals("5",grading.loadReport(submission).getCases().get(0).getExpectedOutput());
+            assertFalse(grading.loadConfig(assignment).hasDriver());
             grading.saveReport(submission,GradingReport.unavailable("NO_TEST_CASES","Chưa có test"));assertNull(grading.loadReport(submission).getScore());
             source=Files.createTempDirectory("aita-pg-source-").resolve("Main.java");
             Files.write(source,("public class Main { public static int f(int n){ int s=0; for(int i=0;i<n;i++){ for(int j=0;j<n;j++) s++; }return s;} }").getBytes(StandardCharsets.UTF_8));
@@ -68,6 +82,13 @@ public class PostgresJdbcIT {
                 assertFalse(ai.getBySubmissionId(submission).isEmpty());AiOptimization o=ai.getBySubmissionId(submission).get(0);
                 assertNotNull(ai.getByMethodId(o.getMethodId()));assertNotNull(ai.findByOriginalCode(o.getOriginalCode()));
                 assertNotNull(o.getComplexityAfter());
+                // Keep the same created_at deliberately: latest selection must break timestamp ties by ID.
+                o.setScore(100.0);o.setRubricType("BST");assertTrue(ai.insertOptimization(o));
+                AiOptimization cached=ai.findByOriginalCode(o.getOriginalCode(),"BST");
+                assertNotNull(cached);assertNotNull("Latest cache row must retain its score",cached.getScore());
+                assertEquals(100.0,cached.getScore(),0.001);assertEquals("BST",cached.getRubricType());
+                assertEquals(100.0,ai.getByMethodId(o.getMethodId()).getScore(),0.001);
+                assertNull(ai.findByOriginalCode(o.getOriginalCode(),"LINKEDLIST"));
             }
             assertNotNull(analysis.getReportsStatusMapByCourse(course));grading.updateStatus(submission,"Completed");
             assertEquals("Completed",grading.findSubmission(submission).getStatus());

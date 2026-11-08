@@ -4,7 +4,12 @@ import com.fpt.aita.dal.AnalysisReportDAO;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
+import java.util.Set;
+import java.util.TreeSet;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.AssignExpr;
 import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.ConditionalExpr;
@@ -45,7 +50,11 @@ public class AstAnalyzerService {
     private final AnalysisReportDAO reportDAO;
 
     private AstAnalyzerService() {
-        this.reportDAO = new AnalysisReportDAO();
+        this(new AnalysisReportDAO());
+    }
+
+    AstAnalyzerService(AnalysisReportDAO reportDAO) {
+        this.reportDAO = reportDAO;
     }
 
     public static AstAnalyzerService getInstance() {
@@ -88,6 +97,8 @@ public class AstAnalyzerService {
                 return true;
             }
 
+            boolean linkedListRubric = "LINKEDLIST".equals(reportDAO.getRubricTypeBySubmissionId(submissionId));
+
             // Đọc ID của các bộ luật từ CSDL
             int rulePerf01 = reportDAO.getRuleIdByCode("PERF01"); // Nested Loops O(N^2)
             int rulePerf02 = reportDAO.getRuleIdByCode("PERF02"); // String concat in loop
@@ -113,31 +124,30 @@ public class AstAnalyzerService {
                 int fileId = reportDAO.insertSourceFile(submissionId, fileName, loc);
                 if (fileId <= 0) continue;
 
-                // Kiểm tra Rule LL01: Sử dụng thư viện có sẵn java.util.LinkedList (Cấm theo Rubric)
-                for (int lineIdx = 0; lineIdx < lines.size(); lineIdx++) {
-                    String lineText = lines.get(lineIdx).trim();
-                    if (lineText.contains("import java.util.LinkedList") || lineText.contains("java.util.LinkedList")
-                            || (lineText.contains("LinkedList") && lineText.contains("new LinkedList"))) {
-                        reportDAO.insertIssue(fileId, null, ruleLL01, lineIdx + 1, "Critical",
-                                "[Rubric LinkedList] Phát hiện sử dụng thư viện có sẵn java.util.LinkedList thay vì tự xây dựng cấu trúc con trỏ Node.",
-                                "Theo Rubric: Bị phạt nặng và chấm 0 điểm cho phần cài đặt danh sách liên kết. Hãy tự tạo lớp Node và quản trị con trỏ head, tail.");
-                        totalIssuesCount++;
-                        criticalCount++;
-                    }
-                }
-
                 CompilationUnit cu;
                 try {
                     cu = StaticJavaParser.parse(jf);
                 } catch (Exception parseEx) {
                     System.err.println("Lỗi cú pháp khi parse AST file " + fileName + ": " + parseEx.getMessage());
                     // Ghi nhận lỗi cú pháp
-                    reportDAO.insertIssue(fileId, null, ruleCode01, 1, "Critical",
-                            "File có lỗi cú pháp biên dịch: " + parseEx.getMessage(),
-                            "Kiểm tra lại cú pháp Java của file để trình biên dịch có thể sinh cây AST hoàn chỉnh.");
-                    totalIssuesCount++;
-                    criticalCount++;
+                    if (ruleCode01 > 0) {
+                        reportDAO.insertIssue(fileId, null, ruleCode01, 1, "Critical",
+                                "File có lỗi cú pháp biên dịch: " + parseEx.getMessage(),
+                                "Kiểm tra lại cú pháp Java của file để trình biên dịch có thể sinh cây AST hoàn chỉnh.");
+                        totalIssuesCount++;
+                        criticalCount++;
+                    }
                     continue;
+                }
+
+                if (linkedListRubric && ruleLL01 > 0) {
+                    for (Integer line : linkedListUsageLines(cu)) {
+                        reportDAO.insertIssue(fileId, null, ruleLL01, line, "Critical",
+                                "[Rubric LinkedList] Sử dụng java.util.LinkedList thay vì tự cài đặt Node.",
+                                "Tự xây dựng Node và quản lý head, tail theo yêu cầu bài tập.");
+                        totalIssuesCount++;
+                        criticalCount++;
+                    }
                 }
 
                 List<MethodDeclaration> methods = cu.findAll(MethodDeclaration.class);
@@ -172,7 +182,7 @@ public class AstAnalyzerService {
 
                     // 5. QUÉT ĐỐI CHIẾU CÁC QUY TẮC RULES
                     // Rule PERF01: Nested Loops O(N^2) trở lên
-                    if (maxLoopDepth >= 2) {
+                    if (rulePerf01 > 0 && maxLoopDepth >= 2) {
                         reportDAO.insertIssue(fileId, methodId, rulePerf01, startLine, "Warning",
                                 "Phát hiện " + maxLoopDepth + " vòng lặp lồng nhau trong hàm '" + methodName + "' (Độ phức tạp " + estimatedComplexity + ").",
                                 "Vòng lặp lồng nhau có chi phí tính toán cao. Hãy cân nhắc dùng cấu trúc dữ liệu băm (HashMap/HashSet) để giảm độ phức tạp về O(N).");
@@ -181,7 +191,7 @@ public class AstAnalyzerService {
                     }
 
                     // Rule PERF02: Ghép chuỗi trong vòng lặp
-                    if (hasStringConcatInLoop(md)) {
+                    if (rulePerf02 > 0 && hasStringConcatInLoop(md)) {
                         reportDAO.insertIssue(fileId, methodId, rulePerf02, startLine, "Warning",
                                 "Ghép chuỗi (+) trong vòng lặp của hàm '" + methodName + "'.",
                                 "Cộng chuỗi trực tiếp trong vòng lặp tạo nhiều đối tượng String rác trong Heap. Hãy sử dụng StringBuilder để tối ưu bộ nhớ.");
@@ -190,7 +200,7 @@ public class AstAnalyzerService {
                     }
 
                     // Rule SEC01: Lỗ hổng SQL Injection (Ghép chuỗi trong SQL)
-                    if (hasSqlInjectionRisk(md)) {
+                    if (ruleSec01 > 0 && hasSqlInjectionRisk(md)) {
                         reportDAO.insertIssue(fileId, methodId, ruleSec01, startLine, "Critical",
                                 "Nguy cơ SQL Injection: Phát hiện ghép chuỗi trực tiếp vào câu lệnh SQL trong hàm '" + methodName + "'.",
                                 "Việc nối chuỗi trực tiếp vào câu truy vấn cho phép kẻ tấn công phá vỡ cấu trúc SQL. Bắt buộc dùng PreparedStatement với tham số (?).");
@@ -199,7 +209,7 @@ public class AstAnalyzerService {
                     }
 
                     // Rule SEC02: Rò rỉ tài nguyên kết nối (Resource Leak)
-                    if (hasResourceLeakRisk(md)) {
+                    if (ruleSec02 > 0 && hasResourceLeakRisk(md)) {
                         reportDAO.insertIssue(fileId, methodId, ruleSec02, startLine, "Warning",
                                 "Nguy cơ rò rỉ tài nguyên (Resource Leak): Mở kết nối Database hoặc luồng I/O trong hàm '" + methodName + "' mà không đóng an toàn.",
                                 "Hãy sử dụng cấu trúc try-with-resources để đảm bảo Connection, PreparedStatement, ResultSet luôn được giải phóng.");
@@ -208,7 +218,7 @@ public class AstAnalyzerService {
                     }
 
                     // Rule CODE01: Độ phức tạp Cyclomatic quá cao (> 10)
-                    if (cyclomatic > 10) {
+                    if (ruleCode01 > 0 && cyclomatic > 10) {
                         reportDAO.insertIssue(fileId, methodId, ruleCode01, startLine, "Warning",
                                 "Độ phức tạp Cyclomatic của hàm '" + methodName + "' quá cao (" + cyclomatic + " > 10).",
                                 "Hàm có quá nhiều nhánh rẽ (if/else/switch/loop), khó kiểm thử và bảo trì. Hãy phân rã thành các hàm nhỏ hơn.");
@@ -218,7 +228,7 @@ public class AstAnalyzerService {
 
                     // Rule CODE02: Hàm quá dài (God Method > 50 dòng)
                     int methodLines = endLine - startLine + 1;
-                    if (methodLines > 50) {
+                    if (ruleCode02 > 0 && methodLines > 50) {
                         reportDAO.insertIssue(fileId, methodId, ruleCode02, startLine, "Info",
                                 "Hàm '" + methodName + "' quá dài (" + methodLines + " dòng, vượt quá giới hạn khuyến nghị 50 dòng).",
                                 "Hàm quá dài vi phạm nguyên lý Single Responsibility. Nên chia nhỏ thành các hàm có mục tiêu rõ ràng.");
@@ -227,7 +237,7 @@ public class AstAnalyzerService {
                     }
 
                     // Rule NAM01: Chuẩn đặt tên hàm (CamelCase)
-                    if (Character.isUpperCase(methodName.charAt(0)) || methodName.contains("_")) {
+                    if (ruleNam01 > 0 && (Character.isUpperCase(methodName.charAt(0)) || methodName.contains("_"))) {
                         reportDAO.insertIssue(fileId, methodId, ruleNam01, startLine, "Info",
                                 "Tên hàm '" + methodName + "' không tuân theo chuẩn camelCase của Java.",
                                 "Tên hàm trong Java nên bắt đầu bằng chữ cái thường và viết hoa chữ cái đầu của các từ tiếp theo (vd: calculateTotal).");
@@ -240,7 +250,7 @@ public class AstAnalyzerService {
                             || md.getBody().get().getStatements().isEmpty()
                             || (md.getBody().get().getStatements().size() == 1 && md.getBody().get().getStatement(0).isReturnStmt()
                                 && !md.getBody().get().getStatement(0).asReturnStmt().getExpression().isPresent());
-                    if (isEmptyBody) {
+                    if (linkedListRubric && ruleLL02 > 0 && isEmptyBody) {
                         reportDAO.insertIssue(fileId, methodId, ruleLL02, startLine, "Warning",
                                 "[Rubric LinkedList] Hàm '" + methodName + "' để trống hoặc chưa có mã nguồn hiện thực.",
                                 "Theo Rubric: Hàm để trống hoặc chỉ có khai báo nhận 0 điểm. Hãy hoàn thiện nội dung xử lý của hàm.");
@@ -277,6 +287,29 @@ public class AstAnalyzerService {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // AST nodes exclude comments and string literals. Deduplicate evidence on the same line.
+    static Set<Integer> linkedListUsageLines(CompilationUnit cu) {
+        Set<Integer> lines = new TreeSet<Integer>();
+        for (ImportDeclaration imp : cu.findAll(ImportDeclaration.class)) {
+            if (!imp.isAsterisk() && "java.util.LinkedList".equals(imp.getNameAsString())) {
+                lines.add(imp.getBegin().map(p -> p.line).orElse(1));
+            }
+        }
+        boolean customLinkedList = cu.findAll(ClassOrInterfaceDeclaration.class).stream()
+                .anyMatch(declaration -> "LinkedList".equals(declaration.getNameAsString()));
+        boolean otherLinkedListImport = cu.getImports().stream().anyMatch(imp -> !imp.isAsterisk()
+                && imp.getNameAsString().endsWith(".LinkedList")
+                && !"java.util.LinkedList".equals(imp.getNameAsString()));
+        for (ObjectCreationExpr creation : cu.findAll(ObjectCreationExpr.class)) {
+            String type = creation.getType().getNameWithScope();
+            if ("java.util.LinkedList".equals(type)
+                    || ("LinkedList".equals(type) && !customLinkedList && !otherLinkedListImport)) {
+                lines.add(creation.getBegin().map(p -> p.line).orElse(1));
+            }
+        }
+        return lines;
     }
 
     /**

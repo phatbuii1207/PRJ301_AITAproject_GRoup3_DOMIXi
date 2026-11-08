@@ -85,6 +85,7 @@ CREATE TABLE [dbo].[ASSIGNMENTS](
     [course_id] [int] NULL,          -- Môn học liên kết (class_id trong CLASSES)
     [title] [nvarchar](150) NOT NULL,
     [description] [nvarchar](500) NULL,
+    [rubric_type] [varchar](20) NOT NULL DEFAULT 'NONE',
     [deadline] [datetime] NULL,      -- Hạn nộp bài
     [created_at] [datetime] NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY ([lecturer_id]) REFERENCES [dbo].[USERS]([user_id]),
@@ -172,6 +173,8 @@ CREATE TABLE [dbo].[AI_OPTIMIZATIONS](
     [optimized_code] [nvarchar](MAX) NOT NULL,
     [explanation] [nvarchar](MAX) NOT NULL,
     [new_complexity] [varchar](20) NULL, -- Độ phức tạp SAU khi AI tối ưu: 'O(1)', 'O(N)', 'O(N log N)'...
+    [score] [decimal](6,2) NULL,
+    [rubric_type] [varchar](20) NULL,
     [created_at] [datetime] NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY ([method_id]) REFERENCES [dbo].[METHODS]([method_id]) ON DELETE CASCADE
 );
@@ -337,7 +340,9 @@ INSERT INTO [dbo].[RULES] ([rule_code], [category], [name], [weight], [enabled])
 ('CODE01', 'Code Smells', N'Độ phức tạp Cyclomatic quá cao (Vượt quá ngưỡng 10)', 10, 1),
 ('CODE02', 'Code Smells', N'Hàm quá dài hoặc vượt quá giới hạn dòng (God Method)', 5, 1),
 ('NAM01', 'NamingConvention', N'Vi phạm chuẩn đặt tên Java (CamelCase, PascalCase)', 5, 1),
-('MVC01', 'Architecture', N'Vi phạm kiến trúc MVC2 (Truy vấn database trực tiếp trong JSP/View)', 15, 1);
+('MVC01', 'Architecture', N'Vi phạm kiến trúc MVC2 (Truy vấn database trực tiếp trong JSP/View)', 15, 1),
+('LL01', 'Code Smells', N'Cấm sử dụng thư viện java.util.LinkedList có sẵn khi làm bài LinkedList', 20, 1),
+('LL02', 'Code Smells', N'Thân phương thức rỗng hoặc chưa cài đặt (Empty Method Body)', 10, 1);
 
 -- 2.7. Thêm 30 Bài nộp (Submissions) của 30 sinh viên đầu tiên (student_id từ 4 đến 33)
 INSERT INTO [dbo].[SUBMISSIONS] ([student_id], [assignment_id], [file_path], [sha256_hash], [file_size], [submitted_at], [status]) VALUES

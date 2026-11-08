@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS "ASSIGNMENTS" (
     course_id int NULL,          -- Môn học liên kết (class_id trong CLASSES)
     title varchar(150) NOT NULL,
     description varchar(500) NULL,
+    rubric_type varchar(20) NOT NULL DEFAULT 'NONE',
     deadline timestamp without time zone NULL,      -- Hạn nộp bài
     created_at timestamp without time zone NOT NULL DEFAULT LOCALTIMESTAMP,
     FOREIGN KEY (lecturer_id) REFERENCES "USERS"(user_id),
@@ -110,6 +111,8 @@ CREATE TABLE IF NOT EXISTS "AI_OPTIMIZATIONS" (
     explanation text NOT NULL,
     created_at timestamp without time zone NOT NULL DEFAULT LOCALTIMESTAMP,
     new_complexity varchar(20) NULL, -- Độ phức tạp SAU khi AI tối ưu: 'O(1)', 'O(N)', 'O(N log N)'...
+    score decimal(6,2) NULL,
+    rubric_type varchar(20) NULL,
     FOREIGN KEY (method_id) REFERENCES "METHODS"(method_id) ON DELETE CASCADE
 );
 

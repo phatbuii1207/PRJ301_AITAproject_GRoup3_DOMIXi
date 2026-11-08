@@ -226,18 +226,37 @@ public class AiOptimizationDAO extends DBContext {
         if (o == null) {
             return false;
         }
-        String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+        String sqlWithRubric = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at, score, rubric_type) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlWithRubric)) {
             ps.setInt(1, o.getMethodId());
             ps.setString(2, o.getOriginalCode());
             ps.setString(3, o.getOptimizedCode());
             ps.setString(4, o.getExplanation());
             ps.setString(5, o.getComplexityAfter());
             ps.setTimestamp(6, o.getCreatedAt() != null ? o.getCreatedAt() : new Timestamp(System.currentTimeMillis()));
+            if (o.getScore() != null) {
+                ps.setDouble(7, o.getScore());
+            } else {
+                ps.setNull(7, java.sql.Types.DECIMAL);
+            }
+            ps.setString(8, o.getRubricType());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi insertOptimization: " + e.getMessage());
+            // Fallback nếu cột score hoặc rubric_type chưa có trong CSDL
+            String sql = "INSERT INTO \"AI_OPTIMIZATIONS\" (method_id, original_code, optimized_code, explanation, new_complexity, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?)";
+            try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, o.getMethodId());
+                ps.setString(2, o.getOriginalCode());
+                ps.setString(3, o.getOptimizedCode());
+                ps.setString(4, o.getExplanation());
+                ps.setString(5, o.getComplexityAfter());
+                ps.setTimestamp(6, o.getCreatedAt() != null ? o.getCreatedAt() : new Timestamp(System.currentTimeMillis()));
+                return ps.executeUpdate() > 0;
+            } catch (SQLException ex) {
+                System.err.println("Lỗi insertOptimization: " + ex.getMessage());
+            }
         }
         return false;
     }
@@ -246,9 +265,9 @@ public class AiOptimizationDAO extends DBContext {
      * 2. Lấy bản ghi tối ưu hóa theo method_id.
      */
     public AiOptimization getByMethodId(int methodId) {
-        String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
-                + "FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ? ORDER BY created_at DESC LIMIT 1";
-        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+        String sqlWithRubric = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at, score, rubric_type "
+                + "FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ? ORDER BY created_at DESC, optimization_id DESC LIMIT 1";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlWithRubric)) {
             ps.setInt(1, methodId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -256,7 +275,18 @@ public class AiOptimizationDAO extends DBContext {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi getByMethodId: " + e.getMessage());
+            String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
+                    + "FROM \"AI_OPTIMIZATIONS\" WHERE method_id = ? ORDER BY created_at DESC, optimization_id DESC LIMIT 1";
+            try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, methodId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return mapResultSetToOptimization(rs);
+                    }
+                }
+            } catch (SQLException ex) {
+                System.err.println("Lỗi getByMethodId: " + ex.getMessage());
+            }
         }
         return null;
     }
@@ -266,21 +296,37 @@ public class AiOptimizationDAO extends DBContext {
      */
     public List<AiOptimization> getBySubmissionId(int submissionId) {
         List<AiOptimization> list = new ArrayList<AiOptimization>();
-        String sql = "SELECT o.optimization_id, o.method_id, o.original_code, o.optimized_code, o.explanation, o.new_complexity, o.created_at "
+        String sqlWithRubric = "SELECT o.optimization_id, o.method_id, o.original_code, o.optimized_code, o.explanation, o.new_complexity, o.created_at, o.score, o.rubric_type "
                 + "FROM \"AI_OPTIMIZATIONS\" o "
                 + "INNER JOIN \"METHODS\" m ON o.method_id = m.method_id "
                 + "INNER JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
                 + "WHERE sf.submission_id = ? "
-                + "ORDER BY o.created_at DESC";
-        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                + "ORDER BY o.created_at DESC, o.optimization_id DESC";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlWithRubric)) {
             ps.setInt(1, submissionId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(mapResultSetToOptimization(rs));
                 }
             }
+            return list;
         } catch (SQLException e) {
-            System.err.println("Lỗi getBySubmissionId: " + e.getMessage());
+            String sql = "SELECT o.optimization_id, o.method_id, o.original_code, o.optimized_code, o.explanation, o.new_complexity, o.created_at "
+                    + "FROM \"AI_OPTIMIZATIONS\" o "
+                    + "INNER JOIN \"METHODS\" m ON o.method_id = m.method_id "
+                    + "INNER JOIN \"SOURCE_FILES\" sf ON m.file_id = sf.file_id "
+                    + "WHERE sf.submission_id = ? "
+                    + "ORDER BY o.created_at DESC, o.optimization_id DESC";
+            try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, submissionId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        list.add(mapResultSetToOptimization(rs));
+                    }
+                }
+            } catch (SQLException ex) {
+                System.err.println("Lỗi getBySubmissionId: " + ex.getMessage());
+            }
         }
         return list;
     }
@@ -292,11 +338,11 @@ public class AiOptimizationDAO extends DBContext {
         if (code == null || code.trim().isEmpty()) {
             return null;
         }
-        String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
+        String sqlWithRubric = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at, score, rubric_type "
                 + "FROM \"AI_OPTIMIZATIONS\" "
                 + "WHERE CAST(original_code AS TEXT) = CAST(? AS TEXT) "
-                + "ORDER BY created_at DESC LIMIT 1";
-        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                + "ORDER BY created_at DESC, optimization_id DESC LIMIT 1";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlWithRubric)) {
             ps.setString(1, code);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -304,9 +350,45 @@ public class AiOptimizationDAO extends DBContext {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Lỗi findByOriginalCode: " + e.getMessage());
+            String sql = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at "
+                    + "FROM \"AI_OPTIMIZATIONS\" "
+                    + "WHERE CAST(original_code AS TEXT) = CAST(? AS TEXT) "
+                    + "ORDER BY created_at DESC, optimization_id DESC LIMIT 1";
+            try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, code);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return mapResultSetToOptimization(rs);
+                    }
+                }
+            } catch (SQLException ex) {
+                System.err.println("Lỗi findByOriginalCode: " + ex.getMessage());
+            }
         }
         return null;
+    }
+
+    public AiOptimization findByOriginalCode(String code, String rubricType) {
+        if (code == null || code.trim().isEmpty()) {
+            return null;
+        }
+        if (rubricType != null && !rubricType.trim().isEmpty()) {
+            String sqlWithRubric = "SELECT optimization_id, method_id, original_code, optimized_code, explanation, new_complexity, created_at, score, rubric_type "
+                    + "FROM \"AI_OPTIMIZATIONS\" "
+                    + "WHERE CAST(original_code AS TEXT) = CAST(? AS TEXT) AND rubric_type = ? "
+                    + "ORDER BY created_at DESC, optimization_id DESC LIMIT 1";
+            try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sqlWithRubric)) {
+                ps.setString(1, code);
+                ps.setString(2, rubricType.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return mapResultSetToOptimization(rs);
+                    }
+                }
+            } catch (SQLException ignored) {}
+            return null;
+        }
+        return findByOriginalCode(code);
     }
 
     /**
@@ -425,6 +507,18 @@ public class AiOptimizationDAO extends DBContext {
         o.setExplanation(rs.getString("explanation"));
         try {
             o.setComplexityAfter(rs.getString("new_complexity"));
+        } catch (SQLException ignored) {}
+        try {
+            double sc = rs.getDouble("score");
+            if (!rs.wasNull()) {
+                o.setScore(sc);
+            }
+        } catch (SQLException ignored) {}
+        try {
+            String rt = rs.getString("rubric_type");
+            if (rt != null && !rt.trim().isEmpty()) {
+                o.setRubricType(rt.trim());
+            }
         } catch (SQLException ignored) {}
         o.setCreatedAt(rs.getTimestamp("created_at"));
         return o;

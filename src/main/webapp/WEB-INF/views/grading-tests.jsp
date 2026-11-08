@@ -11,6 +11,9 @@
 <input type="hidden" name="version" value="${configVersion}">
 <input type="hidden" name="csrf" value="${sessionScope.gradingCsrf}">
 <div class="card"><label>Main class (ví dụ Main hoặc demo.Main)</label><input name="mainClass" value="<c:out value='${mainClass}' />" maxlength="200" required>
+<label for="driverSource">Driver Java cho bài nộp một file .java (tùy chọn)</label>
+<textarea id="driverSource" name="driverSource" rows="16" spellcheck="false"><c:out value="${driverSource}" /></textarea>
+<p class="muted">Driver do giảng viên viết, chứa main class phía trên và đọc stdin/ghi stdout theo bộ test. Để trống nếu chỉ chấm ZIP. Tối đa 64 KiB. Không đặt đáp án hoặc bí mật trong driver; mã driver cần chạy cùng mã sinh viên trong sandbox. Hệ thống từ chối bài nộp trùng kiểu/tên driver. Biên dịch tối đa 15 giây; mỗi lần chạy tối đa 5 giây.</p>
 <p class="muted">Mỗi bài từ 1–20 test. Trọng số dương, tối đa 1000 và 2 chữ số thập phân. Input và đáp án mỗi test tối đa 64 KiB. Đáp án/test ẩn không đưa vào container.</p></div>
 <div id="testRows">
 <c:forEach items="${tests}" var="t"><section class="card test-row">

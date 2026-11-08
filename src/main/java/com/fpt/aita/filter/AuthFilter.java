@@ -45,6 +45,43 @@ public class AuthFilter implements Filter {
         HttpSession session = request.getSession(false);
         User currentUser = (session != null) ? (User) session.getAttribute("currentUser") : null;
 
+        // 0. CHẶN MỌI TRUY CẬP TRỰC TIẾP TỚI THƯ MỤC UPLOADS (Bảo vệ bài nộp tĩnh ngoài/trong webroot)
+        // Kiểm tra đa tầng chống bypass qua matrix parameters (;), URL-encoding (%6f), dot-segments (..)
+        // a) Container-normalized path (đã được servlet container Tomcat decode & normalize)
+        String servletPath = request.getServletPath() != null ? request.getServletPath() : "";
+        String pathInfo = request.getPathInfo() != null ? request.getPathInfo() : "";
+        String containerPath = (servletPath + pathInfo).replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+
+        // b) Raw decoded & canonicalized requestURI (chống matrix params và path-traversal dot-segments)
+        String decodedUri = uri;
+        try {
+            decodedUri = java.net.URLDecoder.decode(uri, "UTF-8");
+        } catch (Exception ignored) {}
+
+        // Tách bỏ matrix parameters (;param=...) trong từng path segment
+        String cleanDecodedUri = decodedUri.replaceAll(";[^/]*", "");
+        String relDecoded = cleanDecodedUri;
+        if (contextPath != null && contextPath.length() > 0 && relDecoded.startsWith(contextPath)) {
+            relDecoded = relDecoded.substring(contextPath.length());
+        }
+        relDecoded = relDecoded.replace('\\', '/');
+        // Chuẩn hóa dot-segments (/a/../uploads/ -> /uploads/)
+        String canonicalDecoded = java.nio.file.Paths.get("/").resolve(relDecoded.replaceAll("^/+", "")).normalize().toString().replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+        if (!canonicalDecoded.startsWith("/")) canonicalDecoded = "/" + canonicalDecoded;
+
+        String rawLowerRel = path.replace('\\', '/').toLowerCase(java.util.Locale.ROOT);
+
+        boolean isUploadAccess = containerPath.startsWith("/uploads/") || containerPath.equals("/uploads")
+                || canonicalDecoded.startsWith("/uploads/") || canonicalDecoded.equals("/uploads")
+                || rawLowerRel.startsWith("/uploads/") || rawLowerRel.equals("/uploads")
+                || relDecoded.toLowerCase(java.util.Locale.ROOT).startsWith("/uploads/")
+                || relDecoded.toLowerCase(java.util.Locale.ROOT).equals("/uploads");
+
+        if (isUploadAccess) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Truy cập trực tiếp thư mục uploads bị nghiêm cấm.");
+            return;
+        }
+
         // 1. TÀI NGUYÊN TĨNH VÀ CÔNG KHAI (STATIC & PUBLIC ASSETS)
         if (path.startsWith("/assets/") || path.startsWith("/css/") || path.startsWith("/js/")
                 || path.startsWith("/images/") || path.equals("/favicon.ico")

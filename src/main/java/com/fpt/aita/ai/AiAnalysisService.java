@@ -1,6 +1,9 @@
 package com.fpt.aita.ai;
 
 import com.fpt.aita.dal.AiOptimizationDAO;
+import com.fpt.aita.dal.AnalysisReportDAO;
+import java.util.Arrays;
+import java.util.Locale;
 import com.fpt.aita.dal.AiOptimizationDAO.IssueDTO;
 import com.fpt.aita.dal.AiOptimizationDAO.MethodWithIssuesDTO;
 import com.fpt.aita.model.AiOptimization;
@@ -70,6 +73,7 @@ public class AiAnalysisService {
     private final AiConfig config;
     private final MethodCodeProvider codeProvider;
     private final AiOptimizationDAO dao;
+    private final AnalysisReportDAO reportDAO;
 
     /**
      * Constructor chính — Người 3 sử dụng constructor này trong production.
@@ -79,6 +83,7 @@ public class AiAnalysisService {
         this.config = new AiConfig();
         this.aiClient = AiClientFactory.create(this.config);
         this.dao = new AiOptimizationDAO();
+        this.reportDAO = new AnalysisReportDAO();
         String root = this.config.getExtractedRoot();
         if (root != null && !root.trim().isEmpty()) {
             this.codeProvider = new FileMethodCodeProvider(root);
@@ -97,10 +102,16 @@ public class AiAnalysisService {
      * Constructor dành cho kiểm thử (inject từ ngoài client, provider, dao).
      */
     public AiAnalysisService(AiClient aiClient, AiConfig config, MethodCodeProvider codeProvider, AiOptimizationDAO dao) {
+        this(aiClient, config, codeProvider, dao, new AnalysisReportDAO());
+    }
+
+    public AiAnalysisService(AiClient aiClient, AiConfig config, MethodCodeProvider codeProvider,
+                             AiOptimizationDAO dao, AnalysisReportDAO reportDAO) {
         this.aiClient = aiClient;
         this.config = config;
         this.codeProvider = codeProvider;
         this.dao = dao;
+        this.reportDAO = reportDAO;
     }
 
     /**
@@ -112,6 +123,7 @@ public class AiAnalysisService {
      */
     public AiRunSummary analyzeSubmission(int submissionId) {
         AiRunSummary summary = new AiRunSummary();
+        String rubricType = PromptBuilder.normalizeRubricType(reportDAO.getRubricTypeBySubmissionId(submissionId));
 
         // 1. Lấy danh sách method kèm issues của bài nộp
         List<MethodWithIssuesDTO> allMethods = dao.getMethodsWithIssues(submissionId);
@@ -121,7 +133,7 @@ public class AiAnalysisService {
         }
 
         // 2. Lọc: chỉ lấy method có lỗi Critical/Warning hoặc độ phức tạp O(N^2) trở lên
-        List<MethodWithIssuesDTO> eligible = filterEligibleMethods(allMethods);
+        List<MethodWithIssuesDTO> eligible = filterEligibleMethods(allMethods, rubricType);
         if (eligible.isEmpty()) {
             System.out.println("[AiAnalysisService] Không có method nào đủ điều kiện phân tích AI.");
             return summary;
@@ -144,10 +156,10 @@ public class AiAnalysisService {
 
         // 5. Xử lý từng method
         for (MethodWithIssuesDTO method : toProcess) {
-            Double mScore = processMethod(submissionId, method, summary);
+            Double mScore = processMethod(submissionId, method, summary, rubricType);
             if (mScore != null) {
                 aiScores.add(mScore);
-                double functionMax = PromptBuilder.getMaxPoints(method.getMethodName());
+                double functionMax = PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
                 earnedPoints += Math.max(0.0, Math.min(functionMax, mScore));
                 maxPoints += functionMax;
             }
@@ -174,15 +186,14 @@ public class AiAnalysisService {
      * Xử lý phân tích một phương thức, bọc try/catch riêng để lỗi không lan rộng.
      * @return Điểm số do AI chấm theo rubric (nếu có), hoặc null
      */
-    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary) {
+    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary, String rubricType) {
         int methodId = method.getMethodId();
 
         try {
-            // Kiểm tra đã có tối ưu chưa -> bỏ qua (skipped)
-            if (dao.existsForMethod(methodId)) {
-                System.out.println("[AiAnalysisService] method_id=" + methodId + " đã có tối ưu -> skipped.");
+            AiOptimization existing = dao.getByMethodId(methodId);
+            if (isReusable(existing, rubricType)) {
                 summary.incrementSkipped();
-                return null;
+                return existing.getScore();
             }
 
             // Đọc mã nguồn của phương thức từ file đã giải nén
@@ -190,8 +201,8 @@ public class AiAnalysisService {
 
             // Kiểm tra cache theo original_code nếu code không rỗng
             if (code != null && !code.trim().isEmpty()) {
-                AiOptimization cached = dao.findByOriginalCode(code);
-                if (cached != null) {
+                AiOptimization cached = dao.findByOriginalCode(code, rubricType);
+                if (isReusable(cached, rubricType)) {
                     System.out.println("[AiAnalysisService] method_id=" + methodId + " hit cache -> dùng lại kết quả.");
                     // Lưu bản ghi mới với method_id này nhưng reuse nội dung tối ưu
                     AiOptimization reused = new AiOptimization(
@@ -200,17 +211,23 @@ public class AiAnalysisService {
                             cached.getOptimizedCode(),
                             cached.getExplanation()
                     );
+                    reused.setScore(cached.getScore());
+                    reused.setRubricType(rubricType);
                     reused.setComplexityAfter(cached.getComplexityAfter());
                     reused.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-                    dao.insertOptimization(reused);
+                    if (!dao.insertOptimization(reused)) {
+                        summary.incrementFailed();
+                        return null;
+                    }
                     updateExplanationForIssues(method.getIssues(), cached.getExplanation());
                     summary.incrementFromCache();
-                    return null;
+                    return cached.getScore();
                 }
             }
 
             // Xây dựng AiRequest (KHÔNG đưa tên/mã sinh viên vào)
             AiRequest req = buildRequest(method, code);
+            req.setRubricType(rubricType);
 
             // Gọi AI
             AiResult result = aiClient.analyze(req);
@@ -228,6 +245,8 @@ public class AiAnalysisService {
                     result.getOptimizedCode() != null ? result.getOptimizedCode() : "",
                     result.getExplanation()
             );
+            opt.setScore(validScore(result.getScore()));
+            opt.setRubricType(rubricType);
             opt.setComplexityAfter(result.getNewComplexity());
             opt.setCreatedAt(new Timestamp(System.currentTimeMillis()));
             boolean saved = dao.insertOptimization(opt);
@@ -240,7 +259,7 @@ public class AiAnalysisService {
             // Cập nhật ISSUES.ai_explanation cho từng lỗi của method này
             updateExplanationForIssues(method.getIssues(), result.getExplanation());
             summary.incrementAnalyzed();
-            return result.getScore();
+            return opt.getScore();
 
         } catch (Exception e) {
             // Mỗi method bọc try/catch riêng: lỗi không làm dừng toàn bộ vòng lặp
@@ -248,6 +267,14 @@ public class AiAnalysisService {
             summary.incrementFailed();
             return null;
         }
+    }
+
+    private static Double validScore(Double score) {
+        return score != null && !score.isNaN() && !score.isInfinite() ? score : null;
+    }
+
+    private static boolean isReusable(AiOptimization value, String rubricType) {
+        return value != null && rubricType.equals(value.getRubricType()) && validScore(value.getScore()) != null;
     }
 
     /**
@@ -270,21 +297,24 @@ public class AiAnalysisService {
      * - Độ phức tạp từ O(N^2) trở lên, HOẶC
      * - Thuộc danh sách hàm trong Rubric LinkedList cần AI chấm điểm.
      */
-    private List<MethodWithIssuesDTO> filterEligibleMethods(List<MethodWithIssuesDTO> methods) {
+    private List<MethodWithIssuesDTO> filterEligibleMethods(List<MethodWithIssuesDTO> methods, String rubricType) {
         List<MethodWithIssuesDTO> eligible = new ArrayList<MethodWithIssuesDTO>();
         for (MethodWithIssuesDTO m : methods) {
-            if (hasCriticalOrWarning(m) || isHighComplexity(m.getEstimatedComplexity()) || isRubricMethod(m.getMethodName())) {
+            if (hasCriticalOrWarning(m) || isHighComplexity(m.getEstimatedComplexity()) || isRubricMethod(m.getMethodName(), rubricType)) {
                 eligible.add(m);
             }
         }
         return eligible;
     }
 
-    private boolean isRubricMethod(String methodName) {
+    private boolean isRubricMethod(String methodName, String rubricType) {
         if (methodName == null || methodName.trim().isEmpty()) {
             return false;
         }
-        return RUBRIC_METHODS.contains(methodName.trim().toLowerCase());
+        String name = methodName.trim().toLowerCase(Locale.ROOT);
+        if ("LINKEDLIST".equals(rubricType)) return RUBRIC_METHODS.contains(name);
+        return "BST".equals(rubricType) && Arrays.asList("insert", "search", "delete", "traverse",
+                "inorder", "preorder", "postorder", "height").contains(name);
     }
 
     /**

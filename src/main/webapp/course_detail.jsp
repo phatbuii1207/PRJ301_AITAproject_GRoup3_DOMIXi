@@ -572,6 +572,13 @@
                     <label>Mô tả & Yêu cầu:</label>
                     <textarea name="description" id="createDescriptionInput" rows="3" placeholder="Nhập yêu cầu bài tập..."></textarea>
                     
+                    <label for="createRubricInput">Rubric chấm bài:</label>
+                    <select name="rubric_type" id="createRubricInput">
+                        <option value="NONE">Không áp dụng rubric cấu trúc dữ liệu</option>
+                        <option value="LINKEDLIST">LinkedList</option>
+                        <option value="BST">BST</option>
+                    </select>
+
                     <label>Hạn nộp (Deadline):</label>
                     <input type="datetime-local" name="deadline" id="createDeadlineInput" />
                     
@@ -693,6 +700,7 @@
                                                     data-title="${a.title}"
                                                     data-description="${a.description}"
                                                     data-deadline="${a.deadline}"
+                                                    data-rubric="${a.rubricType}"
                                                     style="margin-right: 6px; background-color: #2563eb;">
                                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                                 Sửa
@@ -701,6 +709,7 @@
                                             <button type="button" class="btn btn-secondary btn-clone-assignment"
                                                     data-title="${a.title}"
                                                     data-description="${a.description}"
+                                                    data-rubric="${a.rubricType}"
                                                     style="margin-right: 6px; background-color: #0f766e; color: #fff; border-color: #0f766e;"
                                                     title="Tạo bài tập mới từ bài này">
                                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
@@ -974,8 +983,9 @@
         // =====================================================================
         // SCRIPT CHỈNH SỬA BÀI TẬP DÀNH CHO GIẢNG VIÊN (EDIT ASSIGNMENT)
         // =====================================================================
-        function openEditAssignmentModal(assignmentId, title, desc, deadline) {
+        function openEditAssignmentModal(assignmentId, title, desc, deadline, rubricType) {
             document.getElementById('editAssignmentId').value = assignmentId;
+            document.getElementById('editRubricInput').value = rubricType || 'NONE';
             document.getElementById('editTitleInput').value = title || '';
             document.getElementById('editDescriptionInput').value = desc || '';
             
@@ -993,7 +1003,7 @@
             document.getElementById('editAssignmentModal').style.display = 'flex';
         }
 
-        function cloneAssignment(title, desc) {
+        function cloneAssignment(title, desc, rubricType) {
             var titleInput = document.getElementById('createTitleInput');
             var descInput = document.getElementById('createDescriptionInput');
             var card = document.getElementById('createAssignmentCard');
@@ -1001,6 +1011,7 @@
                 var prefix = '[Bản sao] ';
                 titleInput.value = (title && title.indexOf(prefix) === 0) ? title : (prefix + (title || ''));
                 descInput.value = desc || '';
+                document.getElementById('createRubricInput').value = rubricType || 'NONE';
                 if (card) {
                     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     card.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
@@ -1030,7 +1041,8 @@
                 btn.addEventListener('click', function() {
                     cloneAssignment(
                         this.dataset.title,
-                        this.dataset.description
+                        this.dataset.description,
+                        this.dataset.rubric
                     );
                 });
             });
@@ -1041,7 +1053,8 @@
                         this.dataset.id,
                         this.dataset.title,
                         this.dataset.description,
-                        this.dataset.deadline
+                        this.dataset.deadline,
+                        this.dataset.rubric
                     );
                 });
             });
@@ -1129,6 +1142,14 @@
                     <textarea name="description" id="editDescriptionInput" rows="4" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box; font-family:inherit;"></textarea>
                 </div>
                 
+                <div style="margin-bottom: 14px;">
+                    <label for="editRubricInput">Rubric chấm bài:</label>
+                    <select name="rubric_type" id="editRubricInput">
+                        <option value="NONE">Không áp dụng rubric cấu trúc dữ liệu</option>
+                        <option value="LINKEDLIST">LinkedList</option>
+                        <option value="BST">BST</option>
+                    </select>
+                </div>
                 <div style="margin-bottom: 20px;">
                     <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#334155;">Hạn nộp bài (Deadline):</label>
                     <input type="datetime-local" name="deadline" id="editDeadlineInput" style="width:100%; padding:10px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;" />

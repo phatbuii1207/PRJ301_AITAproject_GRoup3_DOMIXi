@@ -20,6 +20,8 @@ public class AiOptimization implements Serializable {
     private Timestamp createdAt;
     private String complexityBefore;
     private String complexityAfter;
+    private Double score;
+    private String rubricType = "NONE";
 
     public AiOptimization() {
     }
@@ -131,6 +133,22 @@ public class AiOptimization implements Serializable {
 
     public void setComplexityAfter(String complexityAfter) {
         this.complexityAfter = complexityAfter;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
+    }
+
+    public String getRubricType() {
+        return (rubricType == null || rubricType.trim().isEmpty()) ? "NONE" : rubricType.trim();
+    }
+
+    public void setRubricType(String rubricType) {
+        this.rubricType = (rubricType == null || rubricType.trim().isEmpty()) ? "NONE" : rubricType.trim();
     }
 
     @Override

@@ -94,6 +94,12 @@ public class DockerSandboxIT {
         assertTrue(result.getOutput(), result.getOutput().contains("error:"));
     }
 
+    @Test public void runtimeExitCannotSpoofTimeout() throws Exception {
+        SandboxResult result = service.execute(zip("Main.java",
+                "public class Main { public static void main(String[] a) { System.exit(124); }}"));
+        assertStatus(Status.RUNTIME_ERROR, result);
+    }
+
     @Test public void runtimeExitCannotSpoofCompileError() throws Exception {
         SandboxResult result = service.execute(zip("Main.java",
                 "public class Main { public static void main(String[] a) { System.exit(65); }}"));

@@ -9,12 +9,14 @@ import com.fpt.aita.model.Assignment;
 import com.fpt.aita.model.Course;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.model.User;
+import com.fpt.aita.util.UploadStorage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -52,6 +54,20 @@ public class CourseDetailServlet extends HttpServlet {
     private CourseDAO courseDAO = new CourseDAO();
     private UserDAO userDAO = new UserDAO();
     private AnalysisReportDAO reportDAO = new AnalysisReportDAO();
+
+    public CourseDetailServlet() { }
+
+    CourseDetailServlet(AssignmentDAO assignments, SubmissionDAO submissions, UserDAO users) {
+        this.assignmentDAO = assignments;
+        this.submissionDAO = submissions;
+        this.userDAO = users;
+    }
+
+    private boolean isAssignedLecturer(User user, int courseId) {
+        if (!"Lecturer".equalsIgnoreCase(user.getRole()) || courseId <= 0) return false;
+        List<Integer> classes = userDAO.getClassIdsByUserId(user.getUserId());
+        return classes != null && classes.contains(courseId);
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -96,8 +112,7 @@ public class CourseDetailServlet extends HttpServlet {
 
         // 3b. Phân quyền: Giảng viên chỉ được quản lý các môn mà mình được phân công
         if ("Lecturer".equalsIgnoreCase(currentUser.getRole())) {
-            List<Integer> allowedClasses = userDAO.getClassIdsByUserId(currentUser.getUserId());
-            if (allowedClasses != null && !allowedClasses.isEmpty() && !allowedClasses.contains(courseId)) {
+            if (!isAssignedLecturer(currentUser, courseId)) {
                 session.setAttribute("flashError", "Bạn không được phân công phụ trách môn học này!");
                 response.sendRedirect("home");
                 return;
@@ -157,6 +172,50 @@ public class CourseDetailServlet extends HttpServlet {
             }
         } catch (NumberFormatException ignored) {}
 
+        boolean adminAction = "create_assignment".equals(action) || "update_deadline".equals(action)
+                || "delete_assignment".equals(action) || "edit_assignment".equals(action);
+        String rubricType = null;
+        if (adminAction) {
+            if (!"Lecturer".equalsIgnoreCase(currentUser.getRole())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+            if ("create_assignment".equals(action)) {
+                try {
+                    courseId = Integer.parseInt(courseIdStr);
+                } catch (NumberFormatException ex) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã môn học không hợp lệ.");
+                    return;
+                }
+            } else {
+                Assignment target;
+                try {
+                    target = assignmentDAO.getAssignmentById(Integer.parseInt(request.getParameter("assignmentId")));
+                } catch (NumberFormatException ex) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã bài tập không hợp lệ.");
+                    return;
+                }
+                if (target == null) {
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+                // Authorize the persisted course; a forged courseId must never grant access.
+                courseId = target.getCourseId();
+            }
+            if (!isAssignedLecturer(currentUser, courseId)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không phụ trách môn học này.");
+                return;
+            }
+            if ("create_assignment".equals(action) || "edit_assignment".equals(action)) {
+                rubricType = request.getParameter("rubric_type");
+                if (rubricType == null) rubricType = "NONE";
+                if (!"NONE".equals(rubricType) && !"LINKEDLIST".equals(rubricType) && !"BST".equals(rubricType)) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Rubric không hợp lệ.");
+                    return;
+                }
+            }
+        }
+
         // =====================================================================
         // PHÂN QUYỀN 1: GIẢNG VIÊN (LECTURER)
         // =====================================================================
@@ -181,7 +240,9 @@ public class CourseDetailServlet extends HttpServlet {
                 if (title != null && !title.trim().isEmpty()) {
                     Assignment a = new Assignment(0, currentUser.getUserId(), currentUser.getFullName(),
                                                   courseId, title.trim(), description, deadline, null);
+                    a.setRubricType(rubricType);
                     boolean ok = assignmentDAO.insertAssignmentWithCourse(a);
+                    if (ok) ok = assignmentDAO.updateRubricType(a.getAssignmentId(), rubricType);
                     if (ok) {
                         session.setAttribute("flashSuccess", "Đã tạo bài tập mới cho môn học thành công!");
                     } else {
@@ -250,7 +311,9 @@ public class CourseDetailServlet extends HttpServlet {
                             if (deadline != null) {
                                 a.setDeadline(deadline);
                             }
+                            a.setRubricType(rubricType);
                             boolean ok = assignmentDAO.updateAssignmentFull(a);
+                            if (ok) ok = assignmentDAO.updateRubricType(assignmentId, rubricType);
                             if (ok) {
                                 session.setAttribute("flashSuccess", "Đã cập nhật bài tập #" + assignmentId + " thành công!");
                             } else {
@@ -328,38 +391,16 @@ public class CourseDetailServlet extends HttpServlet {
                         }
                         String sha256 = sb.toString();
 
-                        // 2. Thư mục lưu trữ tệp trên server (/uploads/submissions)
-                        String uploadDirReal = request.getServletContext().getRealPath("/uploads/submissions");
-                        if (uploadDirReal == null) {
-                            uploadDirReal = System.getProperty("user.dir") + "/uploads/submissions";
-                        }
-                        File uploadDir = new File(uploadDirReal);
-                        if (!uploadDir.exists()) {
-                            uploadDir.mkdirs();
-                        }
+                        // 2. Lưu trữ tệp an toàn ngoài webroot qua UploadStorage (không ghi vào webroot hay src/main/webapp)
+                        String safeFileName = UploadStorage.generateSafeFileName(originalFileName, currentUser.getUsername());
+                        Path destPath = UploadStorage.getInstance().save(filePart, safeFileName);
+                        File destFile = destPath.toFile();
 
-                        // 3. Đặt tên tệp an toàn tránh xung đột
-                        String cleanName = originalFileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-                        String safeFileName = System.currentTimeMillis() + "_" + currentUser.getUsername() + "_" + cleanName;
-                        File destFile = new File(uploadDir, safeFileName);
-                        filePart.write(destFile.getAbsolutePath());
-
-                        // 4. Đồng bộ thêm bản sao vào thư mục dự án nếu khả dụng
-                        try {
-                            String realCtx = request.getServletContext().getRealPath("/");
-                            if (realCtx != null && realCtx.contains("target")) {
-                                String srcPath = realCtx.substring(0, realCtx.indexOf("target")) + "src/main/webapp/uploads/submissions";
-                                File srcDir = new File(srcPath);
-                                if (!srcDir.exists()) srcDir.mkdirs();
-                                Files.copy(destFile.toPath(), new File(srcDir, safeFileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
-                            }
-                        } catch (Exception ignored) {}
-
-                        // 5. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL PostgreSQL với trạng thái Pending (Đưa vào Hàng đợi)
+                        // 3. Lưu bản ghi vào bảng SUBMISSIONS trong CSDL PostgreSQL với trạng thái Pending (Đưa vào Hàng đợi)
                         Submission sub = new Submission();
                         sub.setStudentId(currentUser.getUserId());
                         sub.setAssignmentId(assignmentId);
-                        sub.setFilePath("/uploads/submissions/" + safeFileName);
+                        sub.setFilePath("/uploads/submissions/" + destPath.getFileName().toString());
                         sub.setSha256Hash(sha256);
                         sub.setFileSize((int) fileSize);
                         sub.setSubmittedAt(new Timestamp(System.currentTimeMillis()));
@@ -479,24 +520,31 @@ public class CourseDetailServlet extends HttpServlet {
             return;
         }
 
-        // Quyền bảo mật: Chỉ Giảng viên hoặc chính Sinh viên nộp bài mới được tải
-        if (!"Lecturer".equalsIgnoreCase(currentUser.getRole()) && currentUser.getUserId() != sub.getStudentId()) {
+        if ("Lecturer".equalsIgnoreCase(currentUser.getRole())) {
+            Assignment assignment = assignmentDAO.getAssignmentById(sub.getAssignmentId());
+            if (assignment == null || !isAssignedLecturer(currentUser, assignment.getCourseId())) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không phụ trách môn của bài nộp này.");
+                return;
+            }
+        } else if (!"Student".equalsIgnoreCase(currentUser.getRole()) || currentUser.getUserId() != sub.getStudentId()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền tải bài nộp này.");
             return;
         }
 
-        String realPath = request.getServletContext().getRealPath(sub.getFilePath());
-        File file = null;
-        if (realPath != null) {
-            file = new File(realPath);
+        Path resolvedPath = null;
+        try {
+            resolvedPath = UploadStorage.getInstance().resolve(sub.getFilePath());
+        } catch (SecurityException se) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Truy cập tệp bài nộp bị từ chối do vi phạm bảo mật.");
+            return;
+        } catch (IllegalArgumentException iae) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Tệp bài nộp không hợp lệ hoặc không tồn tại.");
+            return;
+        } catch (Exception ex) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Không thể tải tệp bài nộp.");
+            return;
         }
-        if (file == null || !file.exists()) {
-            String rootPath = request.getServletContext().getRealPath("/");
-            if (rootPath != null && rootPath.contains("target")) {
-                String srcPath = rootPath.substring(0, rootPath.indexOf("target")) + "src/main/webapp" + sub.getFilePath();
-                file = new File(srcPath);
-            }
-        }
+        File file = (resolvedPath != null) ? resolvedPath.toFile() : null;
 
         if (file == null || !file.exists()) {
             HttpSession session = request.getSession();

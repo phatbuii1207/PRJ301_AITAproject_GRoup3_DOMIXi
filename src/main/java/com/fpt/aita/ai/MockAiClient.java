@@ -21,7 +21,7 @@ public class MockAiClient implements AiClient {
                 : "processData";
 
         // Tùy theo ruleCode trả về giải thích sư phạm và code tối ưu phù hợp
-        if ("LL01".equalsIgnoreCase(primaryRule)) {
+        if ("LINKEDLIST".equals(req.getRubricType()) && "LL01".equalsIgnoreCase(primaryRule)) {
             String explanation = "[Rubric LinkedList - Vi phạm CẤM] Phát hiện sử dụng thư viện có sẵn java.util.LinkedList "
                     + "hoặc Collection thay vì tự xây dựng cấu trúc danh sách liên kết bằng con trỏ Node. "
                     + "Theo Rubric: Bị phạt điểm tối đa (0 điểm cho tiêu chí này). "
@@ -39,7 +39,7 @@ public class MockAiClient implements AiClient {
             return AiResult.success(explanation, optimizedCode, "O(1)", 0.0);
         }
 
-        if ("LL02".equalsIgnoreCase(primaryRule)) {
+        if ("LINKEDLIST".equals(req.getRubricType()) && "LL02".equalsIgnoreCase(primaryRule)) {
             String explanation = "[Rubric LinkedList - Thiếu hàm cốt lõi] Phát hiện hàm để trống hoặc chưa hoàn thiện logic. "
                     + "Theo Rubric: Hàm rỗng hoặc chỉ có khai báo bị chấm 0 điểm. "
                     + "Khắc phục: Cần hiện thực đầy đủ xử lý trường hợp danh sách rỗng (head == null) và cập nhật kích thước size.";
@@ -111,13 +111,17 @@ public class MockAiClient implements AiClient {
                 + "đã được rà soát theo tiêu chí Rubric: Core logic (50%), Edge cases (25%), State & Pointer management (15%), Complexity (10%). "
                 + "Khuyến nghị: Luôn kiểm tra điều kiện biên khi danh sách rỗng (head == null) hoặc 1 phần tử, đảm bảo liên kết next không bị rò rỉ rác bộ nhớ.";
 
+        if (!"LINKEDLIST".equals(req.getRubricType())) {
+            defaultExplanation = "[Mock AI - " + req.getRubricType() + "] Nhận xét mô phỏng về tính đúng đắn, trường hợp biên và chất lượng phương thức '" + methodName + "'.";
+        }
         String defaultOptimizedCode = req.getCode() != null ? req.getCode() : "// Không có mã nguồn gốc";
         String currentComplexity = (req.getEstimatedComplexity() != null && !req.getEstimatedComplexity().isEmpty())
                 ? req.getEstimatedComplexity()
                 : "O(n)";
 
         // Giả lập điểm theo mức độ phức tạp và lỗi
-        double estimatedScore = "O(1)".equalsIgnoreCase(currentComplexity) ? 8.5 : 7.0;
+        double estimatedScore = PromptBuilder.getMaxPoints(methodName, req.getRubricType())
+                * ("O(1)".equalsIgnoreCase(currentComplexity) ? 0.85 : 0.70);
 
         return AiResult.success(defaultExplanation, defaultOptimizedCode, currentComplexity, estimatedScore);
     }

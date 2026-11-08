@@ -438,11 +438,35 @@ public class AnalysisReportDAO extends DBContext {
         } catch (SQLException e) {
             System.err.println("Loi getRuleIdByCode: " + e.getMessage());
         }
-        return 1;
+        return -1;
+    }
+
+    public String getRubricTypeBySubmissionId(int submissionId) {
+        String sql = "SELECT a.rubric_type "
+                   + "FROM \"ASSIGNMENTS\" a "
+                   + "JOIN \"SUBMISSIONS\" s ON a.assignment_id = s.assignment_id "
+                   + "WHERE s.submission_id = ?";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, submissionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String rubric = rs.getString("rubric_type");
+                    if (rubric != null && !rubric.trim().isEmpty()) {
+                        return rubric.trim();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi getRubricTypeBySubmissionId: " + e.getMessage());
+        }
+        return "NONE";
     }
 
     public boolean insertIssue(int fileId, Integer methodId, int ruleId, int lineNumber,
                                String severity, String message, String aiExplanation) {
+        if (ruleId <= 0) {
+            return false;
+        }
         String sql = "INSERT INTO \"ISSUES\" (file_id, method_id, rule_id, line_number, severity, message, ai_explanation) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {

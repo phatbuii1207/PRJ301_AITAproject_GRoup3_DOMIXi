@@ -1,0 +1,63 @@
+{
+  "mainClass": "Main",
+  "driver": "../grading-driver/Main.java",
+  "rubricType": "BST",
+  "cases": [
+    {
+      "name": "01-empty",
+      "stdin": "height\nsearch 7\ndelete 7\nheight\n",
+      "expected": "0\nfalse\n0\n",
+      "weight": 1,
+      "hidden": false
+    },
+    {
+      "name": "02-insert-search",
+      "stdin": "insert 5\ninsert 3\ninsert 7\nsearch 3\nsearch 9\ninorder\nheight\n",
+      "expected": "true\nfalse\n3 5 7\n2\n",
+      "weight": 1,
+      "hidden": false
+    },
+    {
+      "name": "03-duplicates",
+      "stdin": "insert 5\ninsert 5\ninsert 3\ninsert 3\ninorder\nheight\n",
+      "expected": "3 5\n2\n",
+      "weight": 1,
+      "hidden": true
+    },
+    {
+      "name": "04-delete-leaf",
+      "stdin": "insert 5\ninsert 3\ninsert 7\ndelete 3\ninorder\nsearch 3\nheight\n",
+      "expected": "5 7\nfalse\n2\n",
+      "weight": 1,
+      "hidden": true
+    },
+    {
+      "name": "05-delete-one-child",
+      "stdin": "insert 5\ninsert 3\ninsert 2\ndelete 3\ninorder\nheight\n",
+      "expected": "2 5\n2\n",
+      "weight": 1,
+      "hidden": true
+    },
+    {
+      "name": "06-delete-root",
+      "stdin": "insert 5\ninsert 3\ninsert 7\ninsert 6\ninsert 8\ndelete 5\ninorder\nsearch 5\nheight\n",
+      "expected": "3 6 7 8\nfalse\n3\n",
+      "weight": 1,
+      "hidden": true
+    },
+    {
+      "name": "07-negative-skew",
+      "stdin": "insert -3\ninsert -2\ninsert -1\ninsert 0\ninsert 1\ninorder\nheight\nsearch -2\ndelete 99\nheight\n",
+      "expected": "-3 -2 -1 0 1\n5\ntrue\n5\n",
+      "weight": 1,
+      "hidden": true
+    },
+    {
+      "name": "08-delete-all",
+      "stdin": "insert 2\ninsert 1\ninsert 3\ndelete 2\ndelete 1\ndelete 3\nheight\nsearch 1\ninsert 9\ninorder\nheight\n",
+      "expected": "0\nfalse\n9\n1\n",
+      "weight": 1,
+      "hidden": true
+    }
+  ]
+}

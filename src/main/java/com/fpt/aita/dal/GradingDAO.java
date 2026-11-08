@@ -48,20 +48,20 @@ public final class GradingDAO implements AutoCloseable {
     }
 
     public GradingConfig loadConfig(int assignmentId) throws SQLException {
-        String sql = "SELECT c.main_class,c.config_version,t.* FROM \"GRADING_CONFIGS\" c "
+        String sql = "SELECT c.main_class,c.config_version,c.driver_source,t.* FROM \"GRADING_CONFIGS\" c "
                 + "LEFT JOIN \"GRADING_TEST_CASES\" t ON c.assignment_id=t.assignment_id WHERE c.assignment_id=? ORDER BY t.case_order";
         List<GradingTestCase> tests = new ArrayList<>();
-        String main = null; int version = 0;
+        String main = null, driver = ""; int version = 0;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, assignmentId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    main = rs.getString("main_class"); version = rs.getInt("config_version");
+                    main = rs.getString("main_class"); driver = rs.getString("driver_source"); version = rs.getInt("config_version");
                     if (rs.getObject("case_order") != null) tests.add(testFrom(rs));
                 }
             }
         }
-        return tests.isEmpty() ? null : new GradingConfig(main, version, tests);
+        return tests.isEmpty() ? null : new GradingConfig(main, version, tests, driver);
     }
 
     public void saveConfig(int assignmentId, GradingConfig config) throws SQLException {
@@ -78,10 +78,13 @@ public final class GradingDAO implements AutoCloseable {
                 try (ResultSet rs = ps.executeQuery()) { if (rs.next()) version = rs.getInt(1); }
             }
             if (version != config.getVersion()) throw new IllegalArgumentException("Bộ test đã được sửa. Tải lại trang trước khi lưu.");
-            String sql = version == 0 ? "INSERT INTO \"GRADING_CONFIGS\"(main_class,config_version,assignment_id) VALUES(?,?,?)"
-                    : "UPDATE \"GRADING_CONFIGS\" SET main_class=?,config_version=? WHERE assignment_id=?";
+            String sql = version == 0 ? "INSERT INTO \"GRADING_CONFIGS\"(main_class,config_version,assignment_id,driver_source) VALUES(?,?,?,?)"
+                    : "UPDATE \"GRADING_CONFIGS\" SET main_class=?,config_version=?,driver_source=? WHERE assignment_id=?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                ps.setString(1, config.getMainClass()); ps.setInt(2, version + 1); ps.setInt(3, assignmentId); ps.executeUpdate();
+                ps.setString(1, config.getMainClass()); ps.setInt(2, version + 1);
+                if (version == 0) { ps.setInt(3, assignmentId); ps.setString(4, config.getDriverSource()); }
+                else { ps.setString(3, config.getDriverSource()); ps.setInt(4, assignmentId); }
+                ps.executeUpdate();
             }
             try (PreparedStatement ps = connection.prepareStatement("DELETE FROM \"GRADING_TEST_CASES\" WHERE assignment_id=?")) {
                 ps.setInt(1, assignmentId); ps.executeUpdate();

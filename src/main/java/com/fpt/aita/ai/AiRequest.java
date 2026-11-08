@@ -12,6 +12,7 @@ import java.util.List;
 public class AiRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    private String rubricType = "NONE";
     private String methodName;
     private String code;
     private String estimatedComplexity;
@@ -26,6 +27,12 @@ public class AiRequest implements Serializable {
         this.code = code;
         this.estimatedComplexity = estimatedComplexity;
         this.violations = (violations != null) ? new ArrayList<RuleViolation>(violations) : new ArrayList<RuleViolation>();
+    }
+
+    public String getRubricType() { return rubricType; }
+
+    public void setRubricType(String rubricType) {
+        this.rubricType = PromptBuilder.normalizeRubricType(rubricType);
     }
 
     public String getMethodName() {

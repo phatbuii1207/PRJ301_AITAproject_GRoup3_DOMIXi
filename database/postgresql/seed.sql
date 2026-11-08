@@ -500,7 +500,9 @@ INSERT INTO "RULES" (rule_code, category, name, weight, enabled) VALUES
 ('CODE01', 'Code Smells', 'Độ phức tạp Cyclomatic quá cao (Vượt quá ngưỡng 10)', 10, true),
 ('CODE02', 'Code Smells', 'Hàm quá dài hoặc vượt quá giới hạn dòng (God Method)', 5, true),
 ('NAM01', 'NamingConvention', 'Vi phạm chuẩn đặt tên Java (CamelCase, PascalCase)', 5, true),
-('MVC01', 'Architecture', 'Vi phạm kiến trúc MVC2 (Truy vấn database trực tiếp trong JSP/View)', 15, true);
+('MVC01', 'Architecture', 'Vi phạm kiến trúc MVC2 (Truy vấn database trực tiếp trong JSP/View)', 15, true),
+('LL01', 'Code Smells', 'Cấm sử dụng thư viện java.util.LinkedList có sẵn khi làm bài LinkedList', 20, true),
+('LL02', 'Code Smells', 'Thân phương thức rỗng hoặc chưa cài đặt (Empty Method Body)', 10, true);
 
 INSERT INTO "SUBMISSIONS" (student_id, assignment_id, file_path, sha256_hash, file_size, submitted_at, status) VALUES
 (4, 1, '/uploads/submissions/he180001_lab1.zip', 'a8f5c1d3e2b4f6a7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1', 45210, '2026-09-12 10:15:00', 'Completed'),
