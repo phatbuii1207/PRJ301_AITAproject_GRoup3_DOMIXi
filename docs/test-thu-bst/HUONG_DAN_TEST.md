@@ -49,3 +49,7 @@ Nếu có NOT_CONFIGURED: kiểm tra đã lưu driver và test. COMPILE_ERROR: k
 ## 5. Kiểm tra bộ demo bằng Docker (tùy chọn)
 
 Từ gốc repository, chạy `python3 scripts/verify_bst_demo.py`. Script chỉ ghép driver/file mẫu trong thư mục tạm và chạy Docker có giới hạn; không ghi database, không đọc `.env`. Kỳ vọng bản gốc8/8 và bản search sai6/8. Cần build image trước như bước1.
+
+## Windows: build dừng ở Maven Surefire sau khi pull
+
+Nếu `target/surefire-reports/*.txt` ghi `FileSystemException` / `A required privilege is not held by the client` tại `createSymbolicLink`, máy thiếu quyền tạo symlink cho fixture test. Bản sửa sau bộ demo tự đánh dấu riêng các test phụ thuộc symlink là skipped khi Windows không tạo được fixture; không cần chạy NetBeans bằng Administrator để build. Trên máy hỗ trợ symlink, các test bảo mật vẫn chạy đầy đủ. Pull bản mới rồi Clean and Build lại. Nếu vẫn fail, gửi file `.txt` có FAILURE/ERROR trong `target/surefire-reports`; dòng BUILD FAILURE cuối không đủ xác định nguyên nhân. Không tắt toàn bộ test để che lỗi.

@@ -148,3 +148,7 @@ Theo yêu cầu người dùng, bổ sung `docs/test-thu-bst/HUONG_DAN_TEST.md`,
 Rà soát Git trước commit: origin/main đồng bộ, không conflict; các file credentials .env không staged; kiểm tra mẫu khóa bí mật và diff whitespace PASS. Giữ lại các tài liệu cá nhân/cấu hình agent untracked ngoài commit. Người dùng đã cho phép commit/push sau kiểm tra, thay thế ràng buộc không commit/push của các task trước cho bước phát hành này.
 
 Kiểm chứng trước push lúc23:34 ngày2026-11-08: Maven verify113/113PASS (88unit+25IT), fresh/upgrade migrations replay2lầnPASS, database tạm đã dọn. Bộ demo16lượt Docker đạt đúng kỳ vọng. Diff check giữ CRLF hiện có (`core.whitespace=cr-at-eol`) PASS.
+
+## AITA-WINDOWS-TEST-008 — fixture symlink trên Windows
+
+Rà lỗi Surefire sau khi pull trên máy Windows phát hiện4test tạo symlink chưa xử lý IOException khi tài khoản thiếu quyền. Thêm helper test-only SymlinkSupport dùng JUnit assumption: filesystem không hỗ trợ hoặc Windows không tạo được fixture thì báo skipped; lỗi IOException trên hệ điều hành khác vẫn fail. Thay4chỗ tạo symlink để tránh bỏ qua im lặng và giữ nguyên assertions bảo mật khi fixture tạo được. Không thay production hoặc bỏ toàn bộ suite. Maven test trên Linux:88/88PASS,0skipped. Chưa có log Surefire từ máy bạn học và chưa chạy Windows thật nên chưa xác nhận đây là nguyên nhân duy nhất của ảnh lỗi.

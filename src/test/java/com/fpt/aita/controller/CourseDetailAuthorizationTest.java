@@ -84,7 +84,7 @@ public class CourseDetailAuthorizationTest {
         String symlinkName = "123_student_symlink.java";
         java.nio.file.Path symlink = tempUpload.resolve(symlinkName);
         try {
-            java.nio.file.Files.createSymbolicLink(symlink, realFile);
+            com.fpt.aita.testsupport.SymlinkSupport.createOrSkip(symlink, realFile);
             com.fpt.aita.util.UploadStorage.init(tempUpload, null);
             AssignmentDAO assignments = new AssignmentDAO() {
                 @Override public Assignment getAssignmentById(int id) { Assignment a = new Assignment(); a.setAssignmentId(id); a.setCourseId(2); return a; }
@@ -105,7 +105,6 @@ public class CourseDetailAuthorizationTest {
             status = 200;
             s.doGet(request(p), response());
             assertEquals(403, status);
-        } catch (UnsupportedOperationException ignored) {
         } finally {
             java.nio.file.Files.deleteIfExists(symlink);
             java.nio.file.Files.deleteIfExists(realFile);

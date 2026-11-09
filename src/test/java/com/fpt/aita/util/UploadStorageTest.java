@@ -218,7 +218,7 @@ public class UploadStorageTest {
         Path symlink = tempPrimaryDir.resolve(linkName);
 
         try {
-            Files.createSymbolicLink(symlink, targetFile);
+            com.fpt.aita.testsupport.SymlinkSupport.createOrSkip(symlink, targetFile);
             // Cố tình resolve symlink
             try {
                 storage.resolve("/uploads/submissions/" + linkName);
@@ -226,8 +226,6 @@ public class UploadStorageTest {
             } catch (SecurityException expected) {
                 assertTrue(expected.getMessage().contains("symbolic link"));
             }
-        } catch (UnsupportedOperationException e) {
-            // Hệ điều hành không hỗ trợ symlink (e.g. non-privileged Windows), bỏ qua
         } finally {
             Files.deleteIfExists(symlink);
             Files.deleteIfExists(targetFile);
@@ -290,7 +288,7 @@ public class UploadStorageTest {
         Path realDir = Files.createTempDirectory("aita-real-ancestor-");
         Path symlinkDir = tempPrimaryDir.resolve("symlink-parent");
         try {
-            Files.createSymbolicLink(symlinkDir, realDir);
+            com.fpt.aita.testsupport.SymlinkSupport.createOrSkip(symlinkDir, realDir);
             Path nestedUpload = symlinkDir.resolve("submissions");
             try {
                 new UploadStorage(nestedUpload, null);
@@ -298,7 +296,6 @@ public class UploadStorageTest {
             } catch (SecurityException expected) {
                 assertTrue(expected.getMessage().contains("symbolic link"));
             }
-        } catch (UnsupportedOperationException ignored) {
         } finally {
             Files.deleteIfExists(symlinkDir);
             deleteRecursively(realDir);

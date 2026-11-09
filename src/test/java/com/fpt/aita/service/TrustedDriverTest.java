@@ -64,7 +64,7 @@ public class TrustedDriverTest {
     @Test(expected=IllegalArgumentException.class) public void driverMustBeValidJava(){ config("Main","not Java"); }
     @Test(expected=IllegalArgumentException.class) public void rejectsOversizedDriver(){ config("Main",String.join("",Collections.nCopies(65537,"x"))); }
     @Test public void rejectsSymlinkSubmission()throws Exception {
-        Path real=source("MyBST.java","class MyBST{}");Path link=temp.getRoot().toPath().resolve("link.java");Files.createSymbolicLink(link,real);
+        Path real=source("MyBST.java","class MyBST{}");Path link=temp.getRoot().toPath().resolve("link.java");com.fpt.aita.testsupport.SymlinkSupport.createOrSkip(link,real);
         assertEquals("INVALID_SUBMISSION",new GradingService((a,b,c)->{throw new AssertionError();}).grade(link,config("Main",driver)).getVerdict());
     }
 }
