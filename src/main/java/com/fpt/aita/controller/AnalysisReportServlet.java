@@ -46,6 +46,11 @@ public class AnalysisReportServlet extends HttpServlet {
             return;
         }
 
+        if (!"Lecturer".equalsIgnoreCase(currentUser.getRole())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Báo cáo AST/AI chỉ dành cho giảng viên phụ trách.");
+            return;
+        }
+
         // 1. Đọc tham số submissionId hoặc reportId
         String submissionIdParam = req.getParameter("submissionId");
         String reportIdParam = req.getParameter("reportId");
@@ -101,27 +106,20 @@ public class AnalysisReportServlet extends HttpServlet {
         }
 
         // 3. KIỂM TRA PHÂN QUYỀN TRUY CẬP (AUTHORIZATION)
-        int ownerStudentId = (submission != null) ? submission.getStudentId() : report.getStudentId();
         int assignmentId = (submission != null) ? submission.getAssignmentId() : report.getAssignmentId();
 
-        if ("Student".equalsIgnoreCase(currentUser.getRole())) {
-            // Sinh viên chỉ được phép xem báo cáo của chính bài mình nộp
-            if (currentUser.getUserId() != ownerStudentId) {
-                resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem báo cáo bài nộp của sinh viên khác!");
-                return;
-            }
-        } else if ("Lecturer".equalsIgnoreCase(currentUser.getRole())) {
-            // Giảng viên chỉ xem bài của lớp môn học mình phụ trách
-            Assignment assignment = assignmentDAO.getAssignmentById(assignmentId);
-            if (assignment != null) {
-                List<Integer> lecturerClassIds = userDAO.getClassIdsByUserId(currentUser.getUserId());
-                boolean isAuthor = (assignment.getLecturerId() == currentUser.getUserId());
-                boolean isTeachingCourse = (lecturerClassIds != null && lecturerClassIds.contains(assignment.getCourseId()));
-                if (!isAuthor && !isTeachingCourse) {
-                    resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem báo cáo của môn học không do bạn phụ trách!");
-                    return;
-                }
-            }
+        // Giảng viên chỉ xem bài của lớp môn học mình phụ trách.
+        Assignment assignment = assignmentDAO.getAssignmentById(assignmentId);
+        if (assignment == null) {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Không tìm thấy bài tập.");
+            return;
+        }
+        List<Integer> lecturerClassIds = userDAO.getClassIdsByUserId(currentUser.getUserId());
+        boolean isAuthor = assignment.getLecturerId() == currentUser.getUserId();
+        boolean isTeachingCourse = lecturerClassIds != null && lecturerClassIds.contains(assignment.getCourseId());
+        if (!isAuthor && !isTeachingCourse) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền xem báo cáo của môn học không do bạn phụ trách!");
+            return;
         }
 
         // 4. XỬ LÝ TRƯỜNG HỢP: Bài nộp đang trong tiến trình phân tích ("Đang chấm")

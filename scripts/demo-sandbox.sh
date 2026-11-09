@@ -52,7 +52,9 @@ if [[ -n "${AITA_SANDBOX_IMAGE:-}" && "$AITA_SANDBOX_IMAGE" != aita-sandbox:java
 fi
 
 echo "Preparing trusted CLI and sample ZIPs (no database required)..."
-"$sandbox_maven" -q -DskipTests test-compile
+"$sandbox_maven" -q -DskipTests test-compile dependency:build-classpath \
+    -Dmdep.outputFile=target/sandbox-demo-classpath.txt
+sandbox_classpath="target/classes:target/test-classes:$(cat target/sandbox-demo-classpath.txt)"
 python3 scripts/prepare-sandbox-demo.py
 mkdir -p target/sandbox-demo/results
 if [[ "$demo_case" == prepare ]]; then exit 0; fi
@@ -72,7 +74,7 @@ run_demo() {
     echo "DEMO: $selected | expected: $expected"
     local arguments=("target/sandbox-demo/$selected.zip" "$expected")
     if [[ -n "$marker" ]]; then arguments+=("$marker"); fi
-    java -cp target/classes:target/test-classes com.fpt.aita.demo.SandboxDemo "${arguments[@]}" \
+    java -cp "$sandbox_classpath" com.fpt.aita.demo.SandboxDemo "${arguments[@]}" \
         | tee "target/sandbox-demo/results/$selected.txt"
 }
 

@@ -309,18 +309,9 @@
                                             <div style="font-size:11.5px; color:#10b981; font-weight:600; margin-bottom:4px;">
                                                 ✅ ${subItem.fileNameOnly}
                                             </div>
-                                            <c:choose>
-                                                <c:when test="${reportMap[subItem.submissionId]}">
-                                                    <a href="report?submissionId=${subItem.submissionId}" class="btn-submit-work" style="background:#0284c7; text-decoration:none; padding:5px 10px; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
-                                                        📊 Xem báo cáo
-                                                    </a>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <a href="report?submissionId=${subItem.submissionId}" class="btn-submit-work" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); text-decoration:none; padding:5px 10px; font-size:12px; display:inline-flex; align-items:center; gap:4px;">
-                                                        ⏳ Đang chấm
-                                                    </a>
-                                                </c:otherwise>
-                                            </c:choose>
+                                            <a href="grading-result?submissionId=${subItem.submissionId}" class="btn-submit-work" style="text-decoration:none; padding:5px 10px; font-size:12px;">
+                                                🧪 Điểm test case
+                                            </a>
                                         </c:when>
                                         <c:otherwise>
                                             <span style="color:#64748b; font-size:12px;">⏳ Chưa nộp bài</span>

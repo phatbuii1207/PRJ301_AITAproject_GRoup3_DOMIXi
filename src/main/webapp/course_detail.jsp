@@ -664,18 +664,7 @@
                                                     </div>
                                                     <div style="margin-top: 6px;">
                                                         <a href="grading-result?submissionId=${sub.submissionId}">Điểm test case</a>
-                                                        <c:choose>
-                                                            <c:when test="${reportMap[sub.submissionId]}">
-                                                                <a href="report?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:#0284c7; color:#fff; border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Xem báo cáo chất lượng mã nguồn">
-                                                                    📊 Xem báo cáo
-                                                                </a>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <a href="grading-result?submissionId=${sub.submissionId}" class="btn-report-pill" style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; font-size:11.5px; font-weight:600; text-decoration:none;" title="Bài nộp đang trong hàng đợi chấm">
-                                                                    🧪 Kết quả test
-                                                                </a>
-                                                            </c:otherwise>
-                                                        </c:choose>
+
                                                     </div>
                                                 </c:when>
                                                 <c:when test="${a.expired}">
@@ -737,18 +726,9 @@
                                                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                                         Sửa / Nộp lại
                                                     </button>
-                                                    <c:choose>
-                                                        <c:when test="${reportMap[sub.submissionId]}">
-                                                            <a href="report?submissionId=${sub.submissionId}" class="btn btn-primary" style="background:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Xem báo cáo phân tích chi tiết">
-                                                                📊 Báo cáo
-                                                            </a>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <a href="grading-result?submissionId=${sub.submissionId}" class="btn btn-secondary" style="border:1px solid #f59e0b; color:#fbbf24; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Hệ thống đang chấm bài">
-                                                                🧪 Kết quả test
-                                                            </a>
-                                                        </c:otherwise>
-                                                    </c:choose>
+                                                    <a href="grading-result?submissionId=${sub.submissionId}" class="btn btn-primary" style="text-decoration:none;" title="Xem điểm chấm test case">
+                                                        🧪 Điểm test case
+                                                    </a>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <button type="button" class="btn btn-primary" onclick="openSubmitModal(${a.assignmentId}, '${a.title}')">

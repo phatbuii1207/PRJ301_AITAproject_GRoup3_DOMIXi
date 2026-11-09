@@ -420,13 +420,9 @@ public class CourseDetailServlet extends HttpServlet {
                                     + "• Mã băm SHA-256: <code style='font-size:12px; font-weight:600;'>" + sha256 + "</code><br/>"
                                     + (queued ? "• Đã đưa vào hàng đợi chấm test case/phân tích AST và AI."
                                     : pipelineSubmission ? "• Chưa đưa được vào hàng đợi. Giảng viên có thể chấm lại tại trang kết quả."
-                                    : "• Tệp đã lưu; bộ chấm tự động chỉ nhận ZIP Java."));
-                            if (zipSubmission) {
+                                    : "• Tệp đã lưu; bộ chấm tự động nhận ZIP hoặc file .java có driver."));
+                            if (pipelineSubmission) {
                                 response.sendRedirect("grading-result?submissionId=" + sub.getSubmissionId());
-                                return;
-                            }
-                            if (javaSubmission && queued) {
-                                response.sendRedirect("report?submissionId=" + sub.getSubmissionId());
                                 return;
                             }
                         } else {
