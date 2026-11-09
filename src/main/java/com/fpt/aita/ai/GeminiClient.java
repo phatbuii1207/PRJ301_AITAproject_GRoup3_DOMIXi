@@ -295,7 +295,7 @@ public class GeminiClient implements AiClient {
         // 1. Kiểm tra với API key sai (kịch bản lỗi không crash)
         System.out.println("--- Test 1: Kiểm thử với API Key sai ---");
         System.setProperty("GEMINI_API_KEY", "INVALID_TEST_KEY_123456");
-        System.setProperty("GEMINI_MODEL", "gemini-1.5-flash");
+        System.setProperty("GEMINI_MODEL", "gemini-flash-lite-latest");
         System.setProperty("AI_PROVIDER", "gemini");
 
         AiConfig invalidConfig = new AiConfig();

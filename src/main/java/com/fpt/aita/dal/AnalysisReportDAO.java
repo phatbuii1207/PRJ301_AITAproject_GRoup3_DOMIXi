@@ -88,7 +88,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "FROM \"ISSUES\" i "
                    + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
                    + "JOIN \"ANALYSIS_REPORTS\" ar ON sf.submission_id = ar.submission_id "
-                   + "JOIN \"RULES\" r ON i.rule_id = r.rule_id "
+                   + "LEFT JOIN \"RULES\" r ON i.rule_id = r.rule_id "
                    + "LEFT JOIN \"METHODS\" m ON i.method_id = m.method_id "
                    + "WHERE ar.report_id = ? "
                    + "ORDER BY "
@@ -123,7 +123,7 @@ public class AnalysisReportDAO extends DBContext {
                    + "       i.line_number, i.severity, i.message, i.ai_explanation "
                    + "FROM \"ISSUES\" i "
                    + "JOIN \"SOURCE_FILES\" sf ON i.file_id = sf.file_id "
-                   + "JOIN \"RULES\" r ON i.rule_id = r.rule_id "
+                   + "LEFT JOIN \"RULES\" r ON i.rule_id = r.rule_id "
                    + "LEFT JOIN \"METHODS\" m ON i.method_id = m.method_id "
                    + "WHERE sf.submission_id = ? "
                    + "ORDER BY "
@@ -460,6 +460,26 @@ public class AnalysisReportDAO extends DBContext {
             System.err.println("Loi getRubricTypeBySubmissionId: " + e.getMessage());
         }
         return "NONE";
+    }
+
+    public String getAssignmentPromptBySubmissionId(int submissionId) {
+        String sql = "SELECT a.title, a.description "
+                   + "FROM \"ASSIGNMENTS\" a "
+                   + "JOIN \"SUBMISSIONS\" s ON a.assignment_id = s.assignment_id "
+                   + "WHERE s.submission_id = ?";
+        try (Connection connection = openConnection(); PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, submissionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String title = rs.getString("title");
+                    String description = rs.getString("description");
+                    return (title == null ? "" : title) + "\n" + (description == null ? "" : description);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Loi getAssignmentPromptBySubmissionId: " + e.getMessage());
+        }
+        return "";
     }
 
     public boolean insertIssue(int fileId, Integer methodId, int ruleId, int lineNumber,

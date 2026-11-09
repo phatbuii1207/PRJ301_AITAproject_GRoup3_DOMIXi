@@ -124,11 +124,17 @@ public class AiAnalysisService {
     public AiRunSummary analyzeSubmission(int submissionId) {
         AiRunSummary summary = new AiRunSummary();
         String rubricType = PromptBuilder.normalizeRubricType(reportDAO.getRubricTypeBySubmissionId(submissionId));
+        String assignmentPrompt = "NONE".equals(rubricType)
+                ? null
+                : reportDAO.getAssignmentPromptBySubmissionId(submissionId);
 
         // 1. Lấy danh sách method kèm issues của bài nộp
         List<MethodWithIssuesDTO> allMethods = dao.getMethodsWithIssues(submissionId);
         if (allMethods == null || allMethods.isEmpty()) {
             System.out.println("[AiAnalysisService] submissionId=" + submissionId + " không có method nào để phân tích.");
+            if (!"NONE".equals(rubricType)) {
+                dao.updateAnalysisReportQualityScore(submissionId, 0);
+            }
             return summary;
         }
 
@@ -136,6 +142,9 @@ public class AiAnalysisService {
         List<MethodWithIssuesDTO> eligible = filterEligibleMethods(allMethods, rubricType);
         if (eligible.isEmpty()) {
             System.out.println("[AiAnalysisService] Không có method nào đủ điều kiện phân tích AI.");
+            if (!"NONE".equals(rubricType)) {
+                dao.updateAnalysisReportQualityScore(submissionId, 0);
+            }
             return summary;
         }
 
@@ -155,13 +164,20 @@ public class AiAnalysisService {
         double maxPoints = 0.0;
 
         // 5. Xử lý từng method
+        if ("LINKEDLIST".equals(rubricType) || "BST".equals(rubricType)) {
+            for (MethodWithIssuesDTO method : eligible) {
+                maxPoints += PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
+            }
+        }
         for (MethodWithIssuesDTO method : toProcess) {
-            Double mScore = processMethod(submissionId, method, summary, rubricType);
+            Double mScore = processMethod(submissionId, method, summary, rubricType, assignmentPrompt);
             if (mScore != null) {
                 aiScores.add(mScore);
                 double functionMax = PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
                 earnedPoints += Math.max(0.0, Math.min(functionMax, mScore));
-                maxPoints += functionMax;
+                if (!"LINKEDLIST".equals(rubricType) && !"BST".equals(rubricType)) {
+                    maxPoints += functionMax;
+                }
             }
         }
 
@@ -176,6 +192,8 @@ public class AiAnalysisService {
             } catch (Exception ex) {
                 System.err.println("[AiAnalysisService] Lỗi khi cập nhật quality_score theo AI: " + ex.getMessage());
             }
+        } else if (!"NONE".equals(rubricType)) {
+            dao.updateAnalysisReportQualityScore(submissionId, 0);
         }
 
         System.out.println("[AiAnalysisService] Hoàn tất submissionId=" + submissionId + " | " + summary);
@@ -186,7 +204,8 @@ public class AiAnalysisService {
      * Xử lý phân tích một phương thức, bọc try/catch riêng để lỗi không lan rộng.
      * @return Điểm số do AI chấm theo rubric (nếu có), hoặc null
      */
-    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary, String rubricType) {
+    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary, String rubricType,
+                                 String assignmentPrompt) {
         int methodId = method.getMethodId();
 
         try {
@@ -228,6 +247,7 @@ public class AiAnalysisService {
             // Xây dựng AiRequest (KHÔNG đưa tên/mã sinh viên vào)
             AiRequest req = buildRequest(method, code);
             req.setRubricType(rubricType);
+            req.setAssignmentPrompt(assignmentPrompt);
 
             // Gọi AI
             AiResult result = aiClient.analyze(req);
@@ -238,6 +258,15 @@ public class AiAnalysisService {
                 return null;
             }
 
+            Double score = validScore(result.getScore());
+            if (!"NONE".equals(rubricType)
+                    && (method.getMethodName() == null
+                    || !method.getMethodName().equals(result.getRequiredMethodName()))) {
+                score = 0.0;
+                System.out.println("[AiAnalysisService] method_id=" + methodId
+                        + " sai tên hàm so với đề; điểm hàm được đặt về 0.");
+            }
+
             // Lưu vào AI_OPTIMIZATIONS
             AiOptimization opt = new AiOptimization(
                     methodId,
@@ -245,7 +274,7 @@ public class AiAnalysisService {
                     result.getOptimizedCode() != null ? result.getOptimizedCode() : "",
                     result.getExplanation()
             );
-            opt.setScore(validScore(result.getScore()));
+            opt.setScore(score);
             opt.setRubricType(rubricType);
             opt.setComplexityAfter(result.getNewComplexity());
             opt.setCreatedAt(new Timestamp(System.currentTimeMillis()));
@@ -274,6 +303,11 @@ public class AiAnalysisService {
     }
 
     private static boolean isReusable(AiOptimization value, String rubricType) {
+        // Rubric scores are tied to the current prompt. Never reuse an older rubric
+        // result after strict scoring rules have changed.
+        if (!"NONE".equals(rubricType)) {
+            return false;
+        }
         return value != null && rubricType.equals(value.getRubricType()) && validScore(value.getScore()) != null;
     }
 

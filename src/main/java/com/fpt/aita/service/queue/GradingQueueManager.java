@@ -1,8 +1,11 @@
 package com.fpt.aita.service.queue;
 
 import com.fpt.aita.dal.GradingDAO;
+import com.fpt.aita.dal.AnalysisReportDAO;
+import com.fpt.aita.model.Assignment;
 import com.fpt.aita.model.GradingConfig;
 import com.fpt.aita.model.GradingReport;
+import com.fpt.aita.model.AnalysisReport;
 import com.fpt.aita.model.Submission;
 import com.fpt.aita.service.GradingService;
 import com.fpt.aita.service.SubmissionAnalysisService;
@@ -12,6 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,7 +69,7 @@ public final class GradingQueueManager {
         if (!running || submissionId <= 0 || queue.remainingCapacity() == 0 || !active.add(submissionId)) return false;
         try (GradingDAO dao = new GradingDAO()) {
             dao.updateStatus(submissionId, "Pending");
-            details.put(submissionId, "Đang chờ chấm test case.");
+            details.put(submissionId, "Đang chờ chấm bài.");
             queue.add(submissionId);
             return true;
         } catch (Exception ex) {
@@ -94,30 +100,52 @@ public final class GradingQueueManager {
                 dao.updateStatus(id, "Processing");
                 config = dao.loadConfig(submission.getAssignmentId());
             }
-            details.put(id, "Đang chạy test case trong Docker Sandbox...");
             Path archive = resolveArchive(submission.getFilePath());
             if (!hash(archive).equalsIgnoreCase(submission.getSha256Hash())) throw new IllegalArgumentException("Submission hash mismatch");
             boolean zip = archive.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".zip");
+            Assignment assignment;
+            try (GradingDAO dao = new GradingDAO()) {
+                assignment = dao.findAssignment(submission.getAssignmentId());
+            }
+            boolean rubricOnly = assignment != null && !"NONE".equalsIgnoreCase(assignment.getRubricType());
             GradingReport report;
-            try {
-                report = new GradingService().grade(archive, config);
-            } catch (RuntimeException gradingFailure) {
-                report = GradingReport.unavailable("GRADING_ERROR", "Lỗi chấm test case; tiếp tục phân tích AST/AI.");
+            if (rubricOnly) {
+                details.put(id, "Đang phân tích và chấm theo rubric; không chạy test case...");
+                report = GradingReport.unavailable("RUBRIC_PENDING", "Đang chấm theo rubric AI.");
+            } else {
+                details.put(id, "Đang chạy test case trong Docker Sandbox...");
+                try {
+                    report = new GradingService().grade(archive, config);
+                } catch (RuntimeException gradingFailure) {
+                    report = GradingReport.unavailable("GRADING_ERROR", "Lỗi chấm test case; tiếp tục phân tích AST/AI.");
+                }
             }
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-            try (GradingDAO dao = new GradingDAO()) { dao.saveReport(id, report); }
             // Optional analysis failures must not replace a valid functional score with GRADING_ERROR.
             {
-                details.put(id, "Đã xử lý test case; đang phân tích AST và đề xuất AI...");
+                details.put(id, rubricOnly ? "Đang phân tích AST và chấm điểm rubric AI..."
+                        : "Đã xử lý test case; đang phân tích AST và đề xuất AI...");
                 try {
                     boolean analyzed = new SubmissionAnalysisService().analyze(id, archive);
-                    if (!zip && analyzed && "NOT_CONFIGURED".equals(report.getVerdict())) try (GradingDAO dao = new GradingDAO()) { dao.updateStatus(id, "Completed"); }
+                    if (rubricOnly && analyzed) {
+                        AnalysisReport rubricReport = new AnalysisReportDAO().getBySubmissionId(id);
+                        int qualityScore = rubricReport == null ? 0 : Math.max(0, Math.min(100, rubricReport.getQualityScore()));
+                        BigDecimal score = BigDecimal.valueOf(qualityScore).divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP);
+                        report = new GradingReport("RUBRIC", "AI", 1, score,
+                                "Điểm được tính theo rubric " + assignment.getRubricType() + "; không chạy test case.",
+                                Collections.<com.fpt.aita.model.GradingCaseResult>emptyList());
+                    } else if (!rubricOnly && !zip && analyzed && "NOT_CONFIGURED".equals(report.getVerdict())) {
+                        try (GradingDAO dao = new GradingDAO()) { dao.updateStatus(id, "Completed"); }
+                    }
                 } catch (Exception analysisFailure) {
                     LOG.warning("Optional AST/AI analysis failed for submission " + id + " (" + analysisFailure.getClass().getSimpleName() + ")");
                 }
             }
-            details.put(id, report.isComplete() ? "Đã chấm " + report.getPassed() + "/" + report.getTotal()
-                    + " test; điểm " + report.getScore() + "/10." : report.getMessage());
+            try (GradingDAO dao = new GradingDAO()) { dao.saveReport(id, report); }
+            details.put(id, report.isComplete()
+                    ? (rubricOnly ? "Đã chấm theo rubric; điểm " + report.getScore() + "/10."
+                            : "Đã chấm " + report.getPassed() + "/" + report.getTotal() + " test; điểm " + report.getScore() + "/10.")
+                    : report.getMessage());
         } catch (InterruptedException ex) {
             details.put(id, "Tác vụ bị gián đoạn; cần chấm lại.");
             saveFailure(id);

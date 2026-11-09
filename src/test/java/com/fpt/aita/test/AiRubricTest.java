@@ -10,6 +10,8 @@ import static org.junit.Assert.*;
 
 public class AiRubricTest {
     private String rubric="NONE";
+    private String assignmentPrompt="Implement the search() function.";
+    private final Map<String,String> requiredMethodNames=new HashMap<String,String>();
     private int calls, quality=-1;
     private boolean rejectCacheInsert;
     private final Map<Integer,AiOptimization> stored=new HashMap<Integer,AiOptimization>();
@@ -28,9 +30,21 @@ public class AiRubricTest {
         MethodWithIssuesDTO m=new MethodWithIssuesDTO();m.setMethodId(id);m.setMethodName(name);m.setFileName("Example.java");m.setEstimatedComplexity(complexity);methods.add(m);return m;
     }
     private AiAnalysisService service(){
-        AiClient client=req->{calls++;assertEquals(rubric,req.getRubricType());return AiResult.success("Review","code","O(1)",PromptBuilder.getMaxPoints(req.getMethodName(),rubric)*0.6);};
+        AiClient client=req->{
+            calls++;
+            assertEquals(rubric,req.getRubricType());
+            assertEquals("NONE".equals(rubric) ? null : assignmentPrompt,req.getAssignmentPrompt());
+            AiResult result=AiResult.success("Review","code","O(1)",PromptBuilder.getMaxPoints(req.getMethodName(),rubric)*0.6);
+            String requiredName=requiredMethodNames.containsKey(req.getMethodName())
+                    ? requiredMethodNames.get(req.getMethodName()) : req.getMethodName();
+            result.setRequiredMethodName(requiredName);
+            return result;
+        };
         return new AiAnalysisService(client,new AiConfig(),(id,file,start,end)->"int search() { return 1; }",dao,
-                new AnalysisReportDAO(){@Override public String getRubricTypeBySubmissionId(int id){return rubric;}});
+                new AnalysisReportDAO(){
+                    @Override public String getRubricTypeBySubmissionId(int id){return rubric;}
+                    @Override public String getAssignmentPromptBySubmissionId(int id){return assignmentPrompt;}
+                });
     }
     @Test public void neutralAndBstPromptsDoNotImposeLinkedList(){
         for(String type:Arrays.asList("NONE","BST")){
@@ -44,6 +58,8 @@ public class AiRubricTest {
         }
         assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("java.util.LinkedList"));
         assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("\"score\": 0.8"));
+        assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("Core logic sai"));
+        assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("Sai thao tác nối Node"));
         assertEquals(1.5,PromptBuilder.getMaxPoints("search","LINKEDLIST"),0.001);
         assertFalse(PromptBuilder.buildSystemInstruction().contains("LinkedList"));
     }
@@ -54,8 +70,8 @@ public class AiRubricTest {
     @Test public void bstCoreMethodsAreSelected(){rubric="BST";method(1,"insert","O(1)");assertEquals(1,service().analyzeSubmission(7).getAnalyzed());assertEquals(60,quality);}
     @Test public void freshCacheAndExistingResultsKeepSameScore(){
         rubric="LINKEDLIST";method(1,"search","O(1)");method(2,"search","O(1)");
-        AiRunSummary first=service().analyzeSubmission(7);assertEquals(1,first.getAnalyzed());assertEquals(1,first.getFromCache());assertEquals(60,quality);assertEquals(1,calls);
-        quality=-1;AiRunSummary again=service().analyzeSubmission(7);assertEquals(2,again.getSkipped());assertEquals(60,quality);assertEquals(1,calls);
+        AiRunSummary first=service().analyzeSubmission(7);assertEquals(2,first.getAnalyzed());assertEquals(0,first.getFromCache());assertEquals(60,quality);assertEquals(2,calls);
+        quality=-1;AiRunSummary again=service().analyzeSubmission(7);assertEquals(2,again.getAnalyzed());assertEquals(0,again.getSkipped());assertEquals(60,quality);assertEquals(4,calls);
     }
     @Test public void cachePointsParticipateInMixedWeightedScore() {
         rubric="LINKEDLIST";
@@ -64,8 +80,8 @@ public class AiRubricTest {
         method(1,"search","O(1)");method(2,"sort","O(1)");
         // Same source but different method maximum: search 0.3/1.5 and sort 0.3/3.
         AiRunSummary result=service().analyzeSubmission(7);
-        assertEquals(2,result.getFromCache());assertEquals(0,calls);
-        assertEquals(13,quality); // round((0.3 + 0.3) / (1.5 + 3) * 100)
+        assertEquals(0,result.getFromCache());assertEquals(2,calls);
+        assertEquals(60,quality);
     }
     @Test public void crossRubricCacheCannotBeReused(){
         rubric="LINKEDLIST";method(1,"search","O(N^2)");service().analyzeSubmission(7);
@@ -80,8 +96,40 @@ public class AiRubricTest {
         method(1,"search","O(N^2)");method(2,"search","O(N^2)");rejectCacheInsert=true;
         AiRunSummary result=service().analyzeSubmission(7);assertEquals(1,result.getFailed());assertEquals(0,result.getFromCache());assertEquals(1,calls);
     }
+    @Test public void wrongFunctionNameGetsZeroWithoutAffectingOtherFunctions() {
+        rubric="LINKEDLIST";
+        assignmentPrompt="Implement find() and sort().";
+        requiredMethodNames.put("search","find");
+        method(1,"search","O(1)");
+        method(2,"sort","O(1)");
+
+        AiRunSummary result=service().analyzeSubmission(7);
+
+        assertEquals(2,result.getAnalyzed());
+        assertEquals(0.0,stored.get(1).getScore(),0.001);
+        assertEquals(1.8,stored.get(2).getScore(),0.001);
+        assertEquals(40,quality);
+    }
+    @Test public void rubricPromptIncludesAssignmentAndRequiresExactMethodName() {
+        AiRequest req=new AiRequest();
+        req.setRubricType("LINKEDLIST");
+        req.setMethodName("search");
+        req.setAssignmentPrompt("Implement search(int value).");
+
+        String prompt=PromptBuilder.buildUserPrompt(req);
+
+        assertTrue(prompt.contains("Implement search(int value)."));
+        assertTrue(prompt.contains("khớp chính xác"));
+        assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("required_method_name"));
+    }
+    @Test public void parserReadsRequiredMethodNameForExactComparison() throws Exception {
+        AiResult result=AiResponseParser.parse("{\"explanation\":\"Review\",\"optimized_code\":\"int search(){return 1;}\","
+                + "\"new_complexity\":\"O(1)\",\"required_method_name\":\"search\",\"score\":1.0}");
+        assertEquals("search",result.getRequiredMethodName());
+    }
     @Test public void mockDefaultUsesRequestedRubricAndScoreScale()throws Exception {
         AiRequest req=new AiRequest();req.setRubricType("BST");req.setMethodName("search");req.setCode("int search(){return 1;}");
-        AiResult result=new MockAiClient().analyze(req);assertFalse(result.getExplanation().contains("LinkedList"));assertTrue(result.getScore()>0 && result.getScore()<=100);
+        req.setAssignmentPrompt("Implement search(int value).");
+        AiResult result=new MockAiClient().analyze(req);assertFalse(result.getExplanation().contains("LinkedList"));assertTrue(result.getScore()>0 && result.getScore()<=100);assertEquals("search",result.getRequiredMethodName());
     }
 }

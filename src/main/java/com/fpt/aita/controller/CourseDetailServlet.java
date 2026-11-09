@@ -566,4 +566,3 @@ public class CourseDetailServlet extends HttpServlet {
         }
     }
 }
-

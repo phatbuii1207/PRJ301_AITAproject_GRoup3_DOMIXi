@@ -145,11 +145,32 @@ public class AnalysisReportServlet extends HttpServlet {
             optimizations = reportDAO.getOptimizations(report.getReportId());
             singleOpt = (optimizations != null && !optimizations.isEmpty()) ? optimizations.get(0) : null;
         }
+        int criticalCount = 0;
+        int warningCount = 0;
+        int infoCount = 0;
+        if (issues != null) {
+            for (Issue issue : issues) {
+                if (issue == null || issue.getSeverity() == null) {
+                    continue;
+                }
+                if ("Critical".equalsIgnoreCase(issue.getSeverity())) {
+                    criticalCount++;
+                } else if ("Warning".equalsIgnoreCase(issue.getSeverity())) {
+                    warningCount++;
+                } else if ("Info".equalsIgnoreCase(issue.getSeverity())) {
+                    infoCount++;
+                }
+            }
+        }
 
         // Cung cấp các thuộc tính cho JSP theo đúng đặc tả Bước 2
         req.setAttribute("report", report);
         req.setAttribute("submission", submission);
         req.setAttribute("issues", issues);
+        req.setAttribute("issueTotal", issues == null ? 0 : issues.size());
+        req.setAttribute("criticalCount", criticalCount);
+        req.setAttribute("warningCount", warningCount);
+        req.setAttribute("infoCount", infoCount);
         req.setAttribute("opt", singleOpt);
         req.setAttribute("optimizations", optimizations);
 

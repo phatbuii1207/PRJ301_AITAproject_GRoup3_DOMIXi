@@ -1,6 +1,7 @@
 package com.fpt.aita.ai;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Bản client giả lập để chạy offline hoặc test mà không cần gọi mạng / API bên ngoài.
@@ -36,7 +37,7 @@ public class MockAiClient implements AiClient {
                     + "    private int size;\n"
                     + "    // Cài đặt con trỏ độc lập không import thư viện sẵn\n"
                     + "}";
-            return AiResult.success(explanation, optimizedCode, "O(1)", 0.0);
+            return withMethodName(req, AiResult.success(explanation, optimizedCode, "O(1)", 0.0));
         }
 
         if ("LINKEDLIST".equals(req.getRubricType()) && "LL02".equalsIgnoreCase(primaryRule)) {
@@ -47,7 +48,7 @@ public class MockAiClient implements AiClient {
                     + "    if (head == null) return;\n"
                     + "    // Xử lý logic nghiệp vụ và cập nhật con trỏ\n"
                     + "}";
-            return AiResult.success(explanation, optimizedCode, "O(1)", 0.0);
+            return withMethodName(req, AiResult.success(explanation, optimizedCode, "O(1)", 0.0));
         }
 
         if ("PERF01".equalsIgnoreCase(primaryRule)) {
@@ -69,7 +70,7 @@ public class MockAiClient implements AiClient {
                     + "    }\n"
                     + "}";
 
-            return AiResult.success(explanation, optimizedCode, "O(n)");
+            return withMethodName(req, AiResult.success(explanation, optimizedCode, "O(n)"));
         }
 
         if ("SEC01".equalsIgnoreCase(primaryRule)) {
@@ -89,7 +90,7 @@ public class MockAiClient implements AiClient {
                     + "    }\n"
                     + "}";
 
-            return AiResult.success(explanation, optimizedCode, "O(1)");
+            return withMethodName(req, AiResult.success(explanation, optimizedCode, "O(1)"));
         }
 
         if ("RES01".equalsIgnoreCase(primaryRule)) {
@@ -103,7 +104,7 @@ public class MockAiClient implements AiClient {
                     + "    }\n"
                     + "}";
 
-            return AiResult.success(explanation, optimizedCode, "O(n)");
+            return withMethodName(req, AiResult.success(explanation, optimizedCode, "O(n)"));
         }
 
         // Trường hợp mặc định nếu không khớp rule cụ thể (Đánh giá theo Rubric LinkedList)
@@ -123,7 +124,19 @@ public class MockAiClient implements AiClient {
         double estimatedScore = PromptBuilder.getMaxPoints(methodName, req.getRubricType())
                 * ("O(1)".equalsIgnoreCase(currentComplexity) ? 0.85 : 0.70);
 
-        return AiResult.success(defaultExplanation, defaultOptimizedCode, currentComplexity, estimatedScore);
+        return withMethodName(req, AiResult.success(defaultExplanation, defaultOptimizedCode, currentComplexity, estimatedScore));
+    }
+
+    private AiResult withMethodName(AiRequest request, AiResult result) {
+        String methodName = request.getMethodName();
+        String assignmentPrompt = request.getAssignmentPrompt();
+        if (methodName != null && assignmentPrompt != null
+                && Pattern.compile("\\b" + Pattern.quote(methodName) + "\\s*\\(").matcher(assignmentPrompt).find()) {
+            result.setRequiredMethodName(methodName);
+        } else {
+            result.setRequiredMethodName("");
+        }
+        return result;
     }
 
     /**

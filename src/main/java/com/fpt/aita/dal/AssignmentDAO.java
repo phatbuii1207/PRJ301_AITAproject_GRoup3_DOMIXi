@@ -1,6 +1,7 @@
 package com.fpt.aita.dal;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import com.fpt.aita.model.Assignment;
 import java.sql.PreparedStatement;
@@ -143,15 +144,50 @@ public class AssignmentDAO extends DBContext {
 
     // 5. DELETE: Xóa bài tập theo ID
     public boolean deleteAssignment(int id) {
-        String sql = "DELETE FROM \"ASSIGNMENTS\" WHERE assignment_id = ?";
-        try (Connection connection = openConnection();
-             PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            return ps.executeUpdate() > 0;
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                deleteDependents(connection,
+                        "DELETE FROM \"ISSUES\" WHERE file_id IN (SELECT sf.file_id FROM \"SOURCE_FILES\" sf JOIN \"SUBMISSIONS\" s ON s.submission_id = sf.submission_id WHERE s.assignment_id = ?) "
+                                + "OR method_id IN (SELECT m.method_id FROM \"METHODS\" m JOIN \"SOURCE_FILES\" sf ON sf.file_id = m.file_id JOIN \"SUBMISSIONS\" s ON s.submission_id = sf.submission_id WHERE s.assignment_id = ?)",
+                        id);
+                deleteDependents(connection,
+                        "DELETE FROM \"AI_OPTIMIZATIONS\" WHERE method_id IN (SELECT m.method_id FROM \"METHODS\" m JOIN \"SOURCE_FILES\" sf ON sf.file_id = m.file_id JOIN \"SUBMISSIONS\" s ON s.submission_id = sf.submission_id WHERE s.assignment_id = ?)",
+                        id);
+                deleteDependents(connection,
+                        "DELETE FROM \"METHODS\" WHERE file_id IN (SELECT sf.file_id FROM \"SOURCE_FILES\" sf JOIN \"SUBMISSIONS\" s ON s.submission_id = sf.submission_id WHERE s.assignment_id = ?)",
+                        id);
+                deleteDependents(connection,
+                        "DELETE FROM \"SOURCE_FILES\" WHERE submission_id IN (SELECT submission_id FROM \"SUBMISSIONS\" WHERE assignment_id = ?)",
+                        id);
+                deleteDependents(connection,
+                        "DELETE FROM \"SUBMISSIONS\" WHERE assignment_id = ?",
+                        id);
+                try (PreparedStatement ps = connection.prepareStatement("DELETE FROM \"ASSIGNMENTS\" WHERE assignment_id = ?")) {
+                    ps.setInt(1, id);
+                    boolean deleted = ps.executeUpdate() > 0;
+                    connection.commit();
+                    return deleted;
+                }
+            } catch (SQLException ex) {
+                connection.rollback();
+                throw ex;
+            } finally {
+                connection.setAutoCommit(true);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    private void deleteDependents(Connection connection, String sql, int assignmentId) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 1; i <= ps.getParameterMetaData().getParameterCount(); i++) {
+                ps.setInt(i, assignmentId);
+            }
+            ps.executeUpdate();
+        }
     }
 
     // =========================================================================
