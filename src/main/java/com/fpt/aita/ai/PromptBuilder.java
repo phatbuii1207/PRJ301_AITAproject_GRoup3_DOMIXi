@@ -99,6 +99,10 @@ public class PromptBuilder {
         sb.append("5. Quy tắc trừ điểm nghiêm ngặt:\n");
         sb.append("   - CẤM dùng thư viện có sẵn (java.util.LinkedList, list.remove(), ...) thay vì tự cài đặt con trỏ -> Chấm 0 điểm!\n");
         sb.append("   - Hàm để trống / chỉ có khai báo -> Chấm 0 điểm!\n");
+        sb.append("   - Core logic sai: không được tự động giữ điểm edge-case, pointer hay quality; tối đa 40% điểm tối đa của hàm.\n");
+        sb.append("   - Sai thao tác nối Node hoặc không thêm node vào danh sách: chấm 0 đến 20% điểm tối đa của hàm.\n");
+        sb.append("   - Thiếu 1 trường hợp head/tail/size do code không xử lý: trừ tối thiểu 30% điểm tối đa của hàm.\n");
+        sb.append("   - Không được chấm điểm thành công chỉ dựa trên lời giải thích; phải kiểm tra thực sự logic và state/pointer trong code.\n");
         sb.append("   - Lỗi NullPointerException / crash trong trường hợp bình thường -> Trừ 50% số điểm của hàm.\n");
         sb.append("   - Lỗi crash trong trường hợp biên (edge case) -> Trừ điểm phần edge cases.\n");
         sb.append("   - Vòng lặp vô tận hoặc sai chữ ký hàm (tên, tham số, kiểu trả về) -> Trừ 30% đến 50% điểm.");

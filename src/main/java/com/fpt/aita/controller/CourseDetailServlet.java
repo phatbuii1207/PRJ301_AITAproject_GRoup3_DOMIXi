@@ -426,7 +426,7 @@ public class CourseDetailServlet extends HttpServlet {
                                 return;
                             }
                             if (javaSubmission && queued) {
-                                response.sendRedirect("report?submissionId=" + sub.getSubmissionId());
+                                response.sendRedirect("grading-result?submissionId=" + sub.getSubmissionId());
                                 return;
                             }
                         } else {
@@ -570,4 +570,3 @@ public class CourseDetailServlet extends HttpServlet {
         }
     }
 }
-

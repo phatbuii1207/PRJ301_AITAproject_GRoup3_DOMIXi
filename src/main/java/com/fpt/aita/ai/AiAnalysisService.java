@@ -129,6 +129,9 @@ public class AiAnalysisService {
         List<MethodWithIssuesDTO> allMethods = dao.getMethodsWithIssues(submissionId);
         if (allMethods == null || allMethods.isEmpty()) {
             System.out.println("[AiAnalysisService] submissionId=" + submissionId + " không có method nào để phân tích.");
+            if (!"NONE".equals(rubricType)) {
+                dao.updateAnalysisReportQualityScore(submissionId, 0);
+            }
             return summary;
         }
 
@@ -136,6 +139,9 @@ public class AiAnalysisService {
         List<MethodWithIssuesDTO> eligible = filterEligibleMethods(allMethods, rubricType);
         if (eligible.isEmpty()) {
             System.out.println("[AiAnalysisService] Không có method nào đủ điều kiện phân tích AI.");
+            if (!"NONE".equals(rubricType)) {
+                dao.updateAnalysisReportQualityScore(submissionId, 0);
+            }
             return summary;
         }
 
@@ -155,13 +161,20 @@ public class AiAnalysisService {
         double maxPoints = 0.0;
 
         // 5. Xử lý từng method
+        if ("LINKEDLIST".equals(rubricType) || "BST".equals(rubricType)) {
+            for (MethodWithIssuesDTO method : eligible) {
+                maxPoints += PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
+            }
+        }
         for (MethodWithIssuesDTO method : toProcess) {
             Double mScore = processMethod(submissionId, method, summary, rubricType);
             if (mScore != null) {
                 aiScores.add(mScore);
                 double functionMax = PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
                 earnedPoints += Math.max(0.0, Math.min(functionMax, mScore));
-                maxPoints += functionMax;
+                if (!"LINKEDLIST".equals(rubricType) && !"BST".equals(rubricType)) {
+                    maxPoints += functionMax;
+                }
             }
         }
 
@@ -176,6 +189,8 @@ public class AiAnalysisService {
             } catch (Exception ex) {
                 System.err.println("[AiAnalysisService] Lỗi khi cập nhật quality_score theo AI: " + ex.getMessage());
             }
+        } else if (!"NONE".equals(rubricType)) {
+            dao.updateAnalysisReportQualityScore(submissionId, 0);
         }
 
         System.out.println("[AiAnalysisService] Hoàn tất submissionId=" + submissionId + " | " + summary);
@@ -274,6 +289,11 @@ public class AiAnalysisService {
     }
 
     private static boolean isReusable(AiOptimization value, String rubricType) {
+        // Rubric scores are tied to the current prompt. Never reuse an older rubric
+        // result after strict scoring rules have changed.
+        if (!"NONE".equals(rubricType)) {
+            return false;
+        }
         return value != null && rubricType.equals(value.getRubricType()) && validScore(value.getScore()) != null;
     }
 

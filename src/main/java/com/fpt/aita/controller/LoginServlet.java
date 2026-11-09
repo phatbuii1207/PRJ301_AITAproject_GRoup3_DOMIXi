@@ -41,6 +41,7 @@ public class LoginServlet extends HttpServlet {
             user = dao.login(u, p);
         } catch (DatabaseUnavailableException | SQLException ex) {
             // A transient database outage is not evidence of an incorrect password.
+            ex.printStackTrace(System.err);
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             response.setHeader("Retry-After", "5");
             request.setAttribute("error", "Tạm thời không kết nối được cơ sở dữ liệu. Vui lòng thử lại sau.");
@@ -74,4 +75,3 @@ public class LoginServlet extends HttpServlet {
     protected UserDAO createUserDAO() { return new UserDAO(); }
 
 }
-

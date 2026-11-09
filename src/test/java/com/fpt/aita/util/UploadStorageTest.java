@@ -226,7 +226,7 @@ public class UploadStorageTest {
             } catch (SecurityException expected) {
                 assertTrue(expected.getMessage().contains("symbolic link"));
             }
-        } catch (UnsupportedOperationException e) {
+        } catch (UnsupportedOperationException | java.nio.file.FileSystemException e) {
             // Hệ điều hành không hỗ trợ symlink (e.g. non-privileged Windows), bỏ qua
         } finally {
             Files.deleteIfExists(symlink);
@@ -298,7 +298,7 @@ public class UploadStorageTest {
             } catch (SecurityException expected) {
                 assertTrue(expected.getMessage().contains("symbolic link"));
             }
-        } catch (UnsupportedOperationException ignored) {
+        } catch (UnsupportedOperationException | java.nio.file.FileSystemException ignored) {
         } finally {
             Files.deleteIfExists(symlinkDir);
             deleteRecursively(realDir);

@@ -22,6 +22,11 @@ public final class GradingDAO implements AutoCloseable {
                 Assignment a = new Assignment();
                 a.setAssignmentId(id); a.setLecturerId(rs.getInt("lecturer_id")); a.setCourseId(rs.getInt("course_id"));
                 a.setTitle(rs.getString("title")); a.setDeadline(rs.getTimestamp("deadline"));
+                try {
+                    a.setRubricType(rs.getString("rubric_type"));
+                } catch (SQLException ignored) {
+                    a.setRubricType("NONE");
+                }
                 return a;
             }
         }

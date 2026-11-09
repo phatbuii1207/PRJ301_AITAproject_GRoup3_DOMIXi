@@ -44,6 +44,8 @@ public class AiRubricTest {
         }
         assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("java.util.LinkedList"));
         assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("\"score\": 0.8"));
+        assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("Core logic sai"));
+        assertTrue(PromptBuilder.buildSystemInstruction("LINKEDLIST").contains("Sai thao tác nối Node"));
         assertEquals(1.5,PromptBuilder.getMaxPoints("search","LINKEDLIST"),0.001);
         assertFalse(PromptBuilder.buildSystemInstruction().contains("LinkedList"));
     }
@@ -54,8 +56,8 @@ public class AiRubricTest {
     @Test public void bstCoreMethodsAreSelected(){rubric="BST";method(1,"insert","O(1)");assertEquals(1,service().analyzeSubmission(7).getAnalyzed());assertEquals(60,quality);}
     @Test public void freshCacheAndExistingResultsKeepSameScore(){
         rubric="LINKEDLIST";method(1,"search","O(1)");method(2,"search","O(1)");
-        AiRunSummary first=service().analyzeSubmission(7);assertEquals(1,first.getAnalyzed());assertEquals(1,first.getFromCache());assertEquals(60,quality);assertEquals(1,calls);
-        quality=-1;AiRunSummary again=service().analyzeSubmission(7);assertEquals(2,again.getSkipped());assertEquals(60,quality);assertEquals(1,calls);
+        AiRunSummary first=service().analyzeSubmission(7);assertEquals(2,first.getAnalyzed());assertEquals(0,first.getFromCache());assertEquals(60,quality);assertEquals(2,calls);
+        quality=-1;AiRunSummary again=service().analyzeSubmission(7);assertEquals(2,again.getAnalyzed());assertEquals(0,again.getSkipped());assertEquals(60,quality);assertEquals(4,calls);
     }
     @Test public void cachePointsParticipateInMixedWeightedScore() {
         rubric="LINKEDLIST";
@@ -64,8 +66,8 @@ public class AiRubricTest {
         method(1,"search","O(1)");method(2,"sort","O(1)");
         // Same source but different method maximum: search 0.3/1.5 and sort 0.3/3.
         AiRunSummary result=service().analyzeSubmission(7);
-        assertEquals(2,result.getFromCache());assertEquals(0,calls);
-        assertEquals(13,quality); // round((0.3 + 0.3) / (1.5 + 3) * 100)
+        assertEquals(0,result.getFromCache());assertEquals(2,calls);
+        assertEquals(60,quality);
     }
     @Test public void crossRubricCacheCannotBeReused(){
         rubric="LINKEDLIST";method(1,"search","O(N^2)");service().analyzeSubmission(7);

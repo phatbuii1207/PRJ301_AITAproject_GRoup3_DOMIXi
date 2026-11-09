@@ -105,7 +105,7 @@ public class CourseDetailAuthorizationTest {
             status = 200;
             s.doGet(request(p), response());
             assertEquals(403, status);
-        } catch (UnsupportedOperationException ignored) {
+        } catch (UnsupportedOperationException | java.nio.file.FileSystemException ignored) {
         } finally {
             java.nio.file.Files.deleteIfExists(symlink);
             java.nio.file.Files.deleteIfExists(realFile);
