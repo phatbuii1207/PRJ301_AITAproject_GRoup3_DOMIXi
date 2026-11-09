@@ -13,6 +13,7 @@ public class AiRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String rubricType = "NONE";
+    private String assignmentPrompt;
     private String methodName;
     private String code;
     private String estimatedComplexity;
@@ -33,6 +34,14 @@ public class AiRequest implements Serializable {
 
     public void setRubricType(String rubricType) {
         this.rubricType = PromptBuilder.normalizeRubricType(rubricType);
+    }
+
+    public String getAssignmentPrompt() {
+        return assignmentPrompt;
+    }
+
+    public void setAssignmentPrompt(String assignmentPrompt) {
+        this.assignmentPrompt = assignmentPrompt;
     }
 
     public String getMethodName() {

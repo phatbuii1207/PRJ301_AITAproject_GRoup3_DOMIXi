@@ -19,19 +19,37 @@ public class LinkedListRubricTest {
     }
 
     public void addLast(int value) {
-        
+        Node node = new Node(value);
+        if (head == null) {
+            head = node;
+        } else {
+            Node current = head;
+            while (current.next != null) {
+                current = current.next;
+            }
+            current.next = node;
+        }
+        size++;
     }
 
     public boolean isEmpty() {
-        return 0;
+        return size == 0;
     }
 
     public int size() {
-        return value;
+        return size;
     }
 
     public int search(int value) {
-        
+        Node current = head;
+        int index = 0;
+        while (current != null) {
+            if (current.value == value) {
+                return index;
+            }
+            current = current.next;
+            index++;
+        }
         return -1;
     }
 }

@@ -80,7 +80,11 @@ public class AiResponseParser {
             }
         }
 
-        return AiResult.success(explanation, optimizedCode, newComplexity, score);
+        AiResult result = AiResult.success(explanation, optimizedCode, newComplexity, score);
+        if (jsonObj.has("required_method_name") && !jsonObj.get("required_method_name").isJsonNull()) {
+            result.setRequiredMethodName(jsonObj.get("required_method_name").getAsString().trim());
+        }
+        return result;
     }
 
     /**

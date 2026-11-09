@@ -124,6 +124,9 @@ public class AiAnalysisService {
     public AiRunSummary analyzeSubmission(int submissionId) {
         AiRunSummary summary = new AiRunSummary();
         String rubricType = PromptBuilder.normalizeRubricType(reportDAO.getRubricTypeBySubmissionId(submissionId));
+        String assignmentPrompt = "NONE".equals(rubricType)
+                ? null
+                : reportDAO.getAssignmentPromptBySubmissionId(submissionId);
 
         // 1. Lấy danh sách method kèm issues của bài nộp
         List<MethodWithIssuesDTO> allMethods = dao.getMethodsWithIssues(submissionId);
@@ -167,7 +170,7 @@ public class AiAnalysisService {
             }
         }
         for (MethodWithIssuesDTO method : toProcess) {
-            Double mScore = processMethod(submissionId, method, summary, rubricType);
+            Double mScore = processMethod(submissionId, method, summary, rubricType, assignmentPrompt);
             if (mScore != null) {
                 aiScores.add(mScore);
                 double functionMax = PromptBuilder.getMaxPoints(method.getMethodName(), rubricType);
@@ -201,7 +204,8 @@ public class AiAnalysisService {
      * Xử lý phân tích một phương thức, bọc try/catch riêng để lỗi không lan rộng.
      * @return Điểm số do AI chấm theo rubric (nếu có), hoặc null
      */
-    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary, String rubricType) {
+    private Double processMethod(int submissionId, MethodWithIssuesDTO method, AiRunSummary summary, String rubricType,
+                                 String assignmentPrompt) {
         int methodId = method.getMethodId();
 
         try {
@@ -243,6 +247,7 @@ public class AiAnalysisService {
             // Xây dựng AiRequest (KHÔNG đưa tên/mã sinh viên vào)
             AiRequest req = buildRequest(method, code);
             req.setRubricType(rubricType);
+            req.setAssignmentPrompt(assignmentPrompt);
 
             // Gọi AI
             AiResult result = aiClient.analyze(req);
@@ -253,6 +258,15 @@ public class AiAnalysisService {
                 return null;
             }
 
+            Double score = validScore(result.getScore());
+            if (!"NONE".equals(rubricType)
+                    && (method.getMethodName() == null
+                    || !method.getMethodName().equals(result.getRequiredMethodName()))) {
+                score = 0.0;
+                System.out.println("[AiAnalysisService] method_id=" + methodId
+                        + " sai tên hàm so với đề; điểm hàm được đặt về 0.");
+            }
+
             // Lưu vào AI_OPTIMIZATIONS
             AiOptimization opt = new AiOptimization(
                     methodId,
@@ -260,7 +274,7 @@ public class AiAnalysisService {
                     result.getOptimizedCode() != null ? result.getOptimizedCode() : "",
                     result.getExplanation()
             );
-            opt.setScore(validScore(result.getScore()));
+            opt.setScore(score);
             opt.setRubricType(rubricType);
             opt.setComplexityAfter(result.getNewComplexity());
             opt.setCreatedAt(new Timestamp(System.currentTimeMillis()));

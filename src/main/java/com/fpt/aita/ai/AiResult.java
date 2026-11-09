@@ -13,6 +13,7 @@ public class AiResult implements Serializable {
     private String explanation;      // Giải thích sư phạm chi tiết nguyên nhân và cách khắc phục
     private String optimizedCode;    // Mã nguồn sau khi đã được tối ưu hóa
     private String newComplexity;    // Độ phức tạp mới sau tối ưu (ví dụ: O(n))
+    private String requiredMethodName;
     private String errorMessage;     // Thông báo lỗi nếu việc phân tích thất bại
     private Double score;            // Điểm số AI chấm theo rubric (tùy chọn)
 
@@ -56,6 +57,14 @@ public class AiResult implements Serializable {
 
     public void setScore(Double score) {
         this.score = score;
+    }
+
+    public String getRequiredMethodName() {
+        return requiredMethodName;
+    }
+
+    public void setRequiredMethodName(String requiredMethodName) {
+        this.requiredMethodName = requiredMethodName;
     }
 
     public boolean isSuccess() {
