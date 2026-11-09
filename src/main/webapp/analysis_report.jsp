@@ -365,7 +365,6 @@
             color: #fff;
         }
         .ai-explain-content {
-            display: none;
             margin-top: 8px;
             padding: 10px 14px;
             background: #090e17;
@@ -710,28 +709,28 @@
                     <div class="metric-box total">
                         <div class="metric-box-title">Tổng Vấn Đề Phát Hiện</div>
                         <div class="metric-box-val" style="color: var(--primary);">
-                            <c:out value="${report.totalIssues}"/>
+                            <c:out value="${issueTotal}"/>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Tổng số lỗi & cảnh báo</div>
                     </div>
                     <div class="metric-box critical">
                         <div class="metric-box-title">Lỗi Nghiêm Trọng (Critical)</div>
                         <div class="metric-box-val" style="color: var(--bad);">
-                            <c:out value="${report.criticalCount}"/>
+                            <c:out value="${criticalCount}"/>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Nguy cơ bảo mật & crash</div>
                     </div>
                     <div class="metric-box warning">
                         <div class="metric-box-title">Cảnh Báo Hiệu Năng (Warning)</div>
                         <div class="metric-box-val" style="color: var(--mid);">
-                            <c:out value="${report.warningCount}"/>
+                            <c:out value="${warningCount}"/>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Vòng lặp & cấu trúc O(N^2+)</div>
                     </div>
                     <div class="metric-box info">
                         <div class="metric-box-title">Quy Chuẩn Code (Info)</div>
                         <div class="metric-box-val" style="color: var(--info);">
-                            <c:out value="${report.infoCount}"/>
+                            <c:out value="${infoCount}"/>
                         </div>
                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Quy ước đặt tên & code smell</div>
                     </div>
@@ -746,23 +745,23 @@
                     <span>🔍</span> Danh Sách Lỗi & Cảnh Báo Phát Hiện (Static Analysis Issues)
                 </h3>
                 <div style="font-size: 13px; color: var(--text-muted);">
-                    Tìm thấy <b><c:out value="${issues.size()}"/></b> vấn đề
+                    <span id="issueFilterSummary">Hiển thị <b><c:out value="${issueTotal}"/></b>/<b><c:out value="${issueTotal}"/></b> vấn đề</span>
                 </div>
             </div>
 
             <!-- Bộ lọc mức độ lỗi trực quan -->
             <div class="filter-bar">
                 <button type="button" class="filter-btn active" onclick="filterIssues('ALL', this)">
-                    Tất Cả (${issues.size()})
+                    Tất Cả (<c:out value="${issueTotal}"/>)
                 </button>
                 <button type="button" class="filter-btn" onclick="filterIssues('Critical', this)">
-                    ⛔ Critical (${report.criticalCount})
+                    ⛔ Critical (<c:out value="${criticalCount}"/>)
                 </button>
                 <button type="button" class="filter-btn" onclick="filterIssues('Warning', this)">
-                    ⚠️ Warning (${report.warningCount})
+                    ⚠️ Warning (<c:out value="${warningCount}"/>)
                 </button>
                 <button type="button" class="filter-btn" onclick="filterIssues('Info', this)">
-                    ℹ️ Info (${report.infoCount})
+                    ℹ️ Info (<c:out value="${infoCount}"/>)
                 </button>
             </div>
 
@@ -781,8 +780,8 @@
                         <c:choose>
                             <c:when test="${empty issues}">
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 40px; color: #34d399;">
-                                        🎉 Tuyệt vời! Không phát hiện lỗi tĩnh nào trong bài nộp này. Mã nguồn sạch và chuẩn chỉnh!
+                                    <td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">
+                                        Chưa có lỗi nào được ghi nhận trong danh sách phân tích tĩnh. Điều này không khẳng định mã nguồn không có lỗi; xem nhận xét AI theo từng hàm bên dưới (nếu có).
                                     </td>
                                 </tr>
                             </c:when>
@@ -796,7 +795,7 @@
                                         </td>
                                         <td>
                                             <div style="font-weight: 600; color: #f1f5f9;">
-                                                <c:out value="${i.ruleName}"/>
+                                                <c:out value="${not empty i.ruleName ? i.ruleName : i.ruleCode}"/>
                                             </div>
                                             <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
                                                 Mã: <code><c:out value="${i.ruleCode}"/></code>
@@ -822,14 +821,15 @@
                                                 <c:out value="${i.message}"/>
                                             </div>
 
-                                            <!-- AI Explanation Dropdown -->
                                             <c:if test="${not empty i.aiExplanation}">
-                                                <button type="button" class="ai-explain-btn" onclick="toggleExplanation(${i.issueId})">
-                                                    <span>💡</span> Xem giải thích chi tiết từ AI
-                                                </button>
-                                                <div id="aiExplain_${i.issueId}" class="ai-explain-content">
-                                                    <b>🤖 AI AITA Tư Vấn:</b><br/>
+                                                <div class="ai-explain-content">
+                                                    <b>🤖 AI giải thích / đề xuất:</b><br/>
                                                     <c:out value="${i.aiExplanation}"/>
+                                                </div>
+                                            </c:if>
+                                            <c:if test="${empty i.aiExplanation}">
+                                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+                                                    AI chưa có nhận xét riêng cho lỗi này.
                                                 </div>
                                             </c:if>
                                         </td>
@@ -840,6 +840,17 @@
                     </tbody>
                 </table>
             </div>
+            <c:if test="${not empty optimizations}">
+                <div style="margin-top: 22px;">
+                    <h4 style="margin: 0 0 12px; color: #38bdf8;">🤖 Nhận xét AI theo từng hàm</h4>
+                    <c:forEach var="op" items="${optimizations}">
+                        <div class="ai-explain-content" style="display: block; margin-top: 10px;">
+                            <b><c:out value="${op.methodName}"/>():</b>
+                            <c:out value="${op.explanation}"/>
+                        </div>
+                    </c:forEach>
+                </div>
+            </c:if>
         </div>
 
         <!-- THÀNH PHẦN 3: SO SÁNH MÃ NGUỒN CODE DIFF (SIDE-BY-SIDE VỚI JSDIFF) -->
@@ -954,25 +965,40 @@
 
         // Lọc từng hàng trong bảng
         var rows = document.querySelectorAll('#issuesTableBody tr.issue-row');
+        var visibleCount = 0;
+        var emptyRow = document.getElementById('issueFilterEmpty');
         rows.forEach(function(row) {
-            var rowSev = row.getAttribute('data-severity');
-            if (severity === 'ALL' || rowSev.toLowerCase() === severity.toLowerCase()) {
+            var rowSev = (row.getAttribute('data-severity') || '').toLowerCase();
+            if (severity === 'ALL' || rowSev === severity.toLowerCase()) {
                 row.style.display = '';
+                visibleCount++;
             } else {
                 row.style.display = 'none';
             }
         });
-    }
-
-    // 3. ĐÓNG MỞ GIẢI THÍCH LỖI TỪ AI
-    function toggleExplanation(issueId) {
-        var box = document.getElementById('aiExplain_' + issueId);
-        if (box) {
-            box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+        if (rows.length > 0 && visibleCount === 0) {
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.id = 'issueFilterEmpty';
+                var cell = document.createElement('td');
+                cell.colSpan = 5;
+                cell.style.textAlign = 'center';
+                cell.style.padding = '28px';
+                cell.style.color = 'var(--text-muted)';
+                emptyRow.appendChild(cell);
+                document.getElementById('issuesTableBody').appendChild(emptyRow);
+            }
+            emptyRow.firstChild.textContent = 'Không có lỗi mức độ ' + severity + '.';
+        } else if (emptyRow) {
+            emptyRow.remove();
+        }
+        var summary = document.getElementById('issueFilterSummary');
+        if (summary) {
+            summary.textContent = 'Hiển thị ' + visibleCount + '/' + rows.length + ' vấn đề';
         }
     }
 
-    // 4. CHUYỂN ĐỔI TAB TỐI ƯU HÓA PHƯƠNG THỨC
+    // 3. CHUYỂN ĐỔI TAB TỐI ƯU HÓA PHƯƠNG THỨC
     function switchOptimization(index, tabBtn) {
         var tabs = document.querySelectorAll('.method-tab');
         tabs.forEach(function(t) { t.classList.remove('active'); });
